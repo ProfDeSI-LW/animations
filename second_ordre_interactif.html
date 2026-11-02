@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Second ordre interactif</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=STIX+Two+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+/* Réponse indicielle d'un second ordre : tracé analytique de s(t) ; rouge = sortie, bleu = entrée, orange = asymptote, vert = bande à 5 %, violet = mesures. */
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --ink:#1d2330; --muted:#5d6678; --line:#d5d9e2;
+  --plateau:#8f97a6; --red:#b3141b; --blue:#1a2bb8; --green:#0a7a2f; --accent:#1a2bb8; --trace:#c26a00; --ang:#7b2fbf;
+  --font-ui:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-math:"STIX Two Text","Latin Modern Roman","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+    --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+  --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.nv{display:flex;align-items:center;gap:3px;min-width:0}
+.nv i{font-style:normal;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.row input.num{width:100%;min-width:0;font:inherit;font-size:.85rem;color:var(--ink);padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);text-align:right;-moz-appearance:textfield}
+.row input.num::-webkit-inner-spin-button,.row input.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+.dimsX{border-top:1px solid var(--line);padding-top:8px}
+.dims summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+.dim{display:grid;grid-template-columns:7.2em minmax(0,1fr) 3.4em;gap:8px;align-items:center;margin-top:6px;font-size:.88rem}
+.dim label{font-family:var(--font-math);font-style:italic}
+.dim output{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.dim input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.dims .lnk{margin-top:8px}
+
+[hidden]{display:none !important}
+.lnk{border:0;background:none;padding:0;color:var(--muted);font-size:.8rem;text-decoration:underline;cursor:pointer}
+.codeline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.codeline input{font:inherit;font-size:.85rem;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:8.5rem}
+.codeline button:not(.lnk){padding:2px 9px;font-size:.85rem}
+
+html{font-size:calc(16px * var(--z,1))}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:.94rem;line-height:1.45;
+  padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.3rem;font-weight:600;margin:0;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.zoom{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem}
+.zoom button{min-width:2.1rem;height:2.1rem;padding:0 6px}
+.info{font-size:.75rem;color:var(--muted)}
+.sub{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 20rem;gap:14px;align-items:start}
+@media (max-width:780px){.layout{grid-template-columns:minmax(0,1fr)}}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;position:relative}
+svg{display:block;width:100%;height:auto;max-height:80vh;cursor:crosshair;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.ctrl{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grp{display:flex;flex-direction:column;gap:4px}
+.row{display:grid;grid-template-columns:1.7em 1.9rem minmax(0,1fr) 1.9rem 1.9rem 10.5ch;gap:4px;align-items:center}
+.row label{font-family:var(--font-math);font-size:1.15rem;font-style:italic}
+.row output{font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.row.v label{font-size:1rem;color:var(--muted)}
+.row.v output{color:var(--muted);font-size:.88rem}
+.row button{padding:0;height:1.9rem;width:1.9rem;line-height:1;font-size:1.05rem}
+.cap{font-size:.82rem;color:var(--muted);margin-top:2px}
+.sep{border:0;border-top:1px solid var(--line);margin:0}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line)}
+svg text.hal{paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+button.main{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+.opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.line2{display:flex;gap:18px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.read{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.read b{color:var(--ink);font-weight:600}
+.num{font-variant-numeric:tabular-nums;color:var(--ink)}
+svg text{font-family:var(--font-math);fill:var(--ink)}
+/* Mode « téléphone / tablette tactile » : écran étroit OU écran tactile sans survol (la résolution seule ne suffit pas) */
+@media (max-width:780px), (hover:none) and (pointer:coarse){
+  body{padding-block:8px;-webkit-text-size-adjust:100%}
+  main{gap:8px}
+  h1{font-size:1.1rem}.sub{display:none}
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .fig{position:sticky;top:6px;z-index:5;padding:2px}
+  svg{max-height:44vh}
+  .row{grid-template-columns:1.6em 2.4rem minmax(0,1fr) 2.4rem 2.4rem 10.5ch}
+  .row button{height:2.4rem;width:2.4rem;font-size:1.2rem}
+  .row input[type=range]{height:1.9rem}
+  .actions button{min-height:2.5rem;padding:6px 12px}
+  .zoom button{min-width:2.5rem;height:2.5rem}
+  .opts label{min-height:2.2rem}
+  .ctrl{padding:10px;gap:10px}
+}
+/* téléphone en paysage : figure fixe à gauche, réglages à droite */
+@media (hover:none) and (pointer:coarse) and (orientation:landscape), (max-height:520px) and (orientation:landscape){
+  .layout{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
+  svg{max-height:calc(100vh - 28px)}
+}
+.figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+.figtools button{padding:3px 9px;font-size:.85rem}
+.warn{color:var(--red);font-size:.85rem}
+.mes{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.mes b{color:var(--ink);font-weight:600}
+.fig.fs{position:fixed;inset:0;z-index:100;border-radius:0;border:0;padding:0;display:flex}
+.fig.fs svg{width:100%;height:100%;max-height:none}
+</style>
+</head>
+<body>
+
+<main>
+  <div class="top">
+   <div>
+    <h1>Réponse d'un second ordre à un échelon</h1>
+    <p class="sub">H(p) = K / (1 + (2z/ω₀)·p + p²/ω₀²). Modifiez les paramètres avec les curseurs ou tapez une valeur exacte, et observez la réponse s(t) à l'échelon e(t). Passez le pointeur sur la courbe pour lire les valeurs.</p>
+   </div>
+   <div class="zoom" role="group" aria-label="Taille de l'affichage">Taille <button id="zm" aria-label="Réduire l'affichage">A−</button><button id="zp" aria-label="Agrandir l'affichage">A+</button><button id="za" aria-label="Taille automatique" title="Taille automatique">auto</button></div>
+  </div>
+  <div class="layout">
+    <div class="fig">
+      <div class="figtools"><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
+      <svg id="fig" viewBox="0 0 640 400" role="img" aria-label="Réponse indicielle d'un système du second ordre : entrée e(t) et sortie s(t) en fonction du temps"></svg>
+    </div>
+    <div class="ctrl">
+      <div class="grp">
+        <div class="row"><label for="p_e0" title="amplitude de l'échelon : e(t) = e₀·u(t)">e₀</label><button data-k="e0" data-d="-1" aria-label="Diminuer e₀">−</button><input id="p_e0" type="range" aria-label="e₀"><button data-k="e0" data-d="1" aria-label="Augmenter e₀">+</button><button data-k="e0" data-d="0" aria-label="Valeur initiale de e₀" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_e0" type="number" step="any" inputmode="decimal" aria-label="e₀, valeur exacte"><i></i></span></div>
+        <div class="cap">amplitude de l'échelon : e(t) = e₀·u(t)</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_K" title="gain statique">K</label><button data-k="K" data-d="-1" aria-label="Diminuer K">−</button><input id="p_K" type="range" aria-label="K"><button data-k="K" data-d="1" aria-label="Augmenter K">+</button><button data-k="K" data-d="0" aria-label="Valeur initiale de K" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_K" type="number" step="any" inputmode="decimal" aria-label="K, valeur exacte"><i></i></span></div>
+        <div class="cap">gain statique</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_z" title="coefficient d'amortissement (sans unité)">z</label><button data-k="z" data-d="-1" aria-label="Diminuer z">−</button><input id="p_z" type="range" aria-label="z"><button data-k="z" data-d="1" aria-label="Augmenter z">+</button><button data-k="z" data-d="0" aria-label="Valeur initiale de z" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_z" type="number" step="any" inputmode="decimal" aria-label="z, valeur exacte"><i></i></span></div>
+        <div class="cap">coefficient d'amortissement (sans unité)</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_w0" title="pulsation propre non amortie">ω₀</label><button data-k="w0" data-d="-1" aria-label="Diminuer ω₀">−</button><input id="p_w0" type="range" aria-label="ω₀"><button data-k="w0" data-d="1" aria-label="Augmenter ω₀">+</button><button data-k="w0" data-d="0" aria-label="Valeur initiale de ω₀" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_w0" type="number" step="any" inputmode="decimal" aria-label="ω₀, valeur exacte"><i>rad/s</i></span></div>
+        <div class="cap">pulsation propre non amortie</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_T" title="durée affichée (axe du temps)">t</label><button data-k="T" data-d="-1" aria-label="Diminuer t">−</button><input id="p_T" type="range" aria-label="t"><button data-k="T" data-d="1" aria-label="Augmenter t">+</button><button data-k="T" data-d="0" aria-label="Valeur initiale de t" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_T" type="number" step="any" inputmode="decimal" aria-label="t, valeur exacte"><i>s</i></span></div>
+        <div class="cap">durée affichée (axe du temps)</div>
+      </div>
+      <label class="chk"><input id="oAuto" type="checkbox"><span>Durée automatique</span></label>
+      <div class="actions"><button id="rinit">Valeurs initiales</button><button id="rtd" disabled title="Mot de passe requis">Valeurs du TD</button></div>
+      <hr class="sep">
+      <div class="opts">
+        <label><input id="oIn" type="checkbox" checked><span>Afficher l'entrée e(t)</span></label>
+        <label><input id="oAs" type="checkbox"><span>Afficher l'asymptote s<sub>∞</sub></span></label>
+        <label><input id="oBd" type="checkbox"><span>Afficher la bande à ±5 %</span></label>
+        <label id="lM" hidden><input id="oM" type="checkbox"><span>Afficher les mesures (D₁, T<sub>p</sub>, t<sub>5 %</sub>)</span></label>
+      </div>
+      <hr class="sep">
+      <div class="read" aria-live="off">
+        <div><b>Forme développée</b> : H(p) = K / (1 + a·p + b·p²)</div>
+        <div class="num" id="coef"></div>
+        <div class="num" id="curs">Pointeur : —</div>
+        <div class="warn" id="warn"></div>
+      </div>
+      <div class="mes" id="mes" hidden></div>
+    </div>
+  </div>
+  <div class="codeline"><button id="cbtn" class="lnk">Mot de passe</button><span id="cbox" hidden><input id="cin" type="password" placeholder="mot de passe" autocomplete="off" aria-label="Mot de passe"> <button id="cok">OK</button></span><button id="clock" class="lnk" hidden>Verrouiller</button></div>
+  <div class="info" id="info"></div>
+</main>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg", PI=Math.PI;
+  var svg=document.getElementById("fig");
+  var LS=1;
+  var DEF={e0:1,K:2,z:0.3,w0:2,T:10}, TD={e0:1.5,K:3.5,z:0.1,w0:0.01,T:7000};
+  var P={e0:DEF.e0,K:DEF.K,z:DEF.z,w0:DEF.w0,T:DEF.T}, auto=false, showIn=true, showAs=false, showBd=false, showM=false, cursT=null;
+  // curseurs : linéaires (e₀, K, z) ou logarithmiques (ω₀, durée : le curseur porte log10 de la valeur)
+  var DEFS=[{id:"e0",min:0,max:5,step:0.1,log:false},{id:"K",min:0,max:10,step:0.1,log:false},{id:"z",min:0,max:3,step:0.01,log:false},{id:"w0",min:-3,max:2,step:0.01,log:true},{id:"T",min:-1,max:4,step:0.01,log:true}];
+  var cs=function(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();};
+  function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+  var FR=function(v,d){var s=(Math.abs(v)<1e-12?0:v).toFixed(d===undefined?3:d);if(s.indexOf(".")>=0)s=s.replace(/0+$/,"").replace(/\.$/,"");return s.replace("-","−").replace(".",",");};
+  var SIG=function(v){if(!isFinite(v))return "—";var a=Math.abs(v);if(a===0)return "0";if(a>=1e5||a<1e-3)return v.toExponential(2).replace("e+","·10^").replace("e","·10^").replace(".",",").replace("-","−").replace("^−","^−");return FR(parseFloat(v.toPrecision(4)),6);};
+
+  // ---- réponse indicielle normalisée y(t) = s(t)/(K e₀) pour H(p) = 1/(1 + 2z p/ω₀ + p²/ω₀²) ----
+  function yStep(t,z,w){
+    if(Math.abs(z)<1e-9)return 1-Math.cos(w*t);
+    if(Math.abs(Math.abs(z)-1)<1e-4)return 1-(1+z*w*t)*Math.exp(-z*w*t);
+    if(Math.abs(z)<1){var wp=w*Math.sqrt(1-z*z),a=z*w;return 1-Math.exp(-a*t)*(Math.cos(wp*t)+a/wp*Math.sin(wp*t));}
+    var r=Math.sqrt(z*z-1),p1=w*(z-r),p2=w*(z+r);
+    return 1-(p2*Math.exp(-p1*t)-p1*Math.exp(-p2*t))/(p2-p1);
+  }
+  function sOut(t){return P.K*P.e0*yStep(t,P.z,P.w0);}
+  // taux d'amortissement dominant (partie réelle du pôle le plus lent)
+  function sigma(){var z=P.z,w=P.w0;if(Math.abs(z)<1)return z*w;if(Math.abs(Math.abs(z)-1)<1e-4)return z*w;var r=Math.sqrt(z*z-1);return z>0?w*(z-r):w*(z+r);}
+  // temps de réponse à 5 % (dernier instant où |s - s∞| > 5 % de |s∞|), par balayage
+  function t5(){
+    var sg=sigma(),sinf=P.K*P.e0;if(!(sg>0)||sinf===0||!(P.w0>0))return null;
+    var Tm=Math.min(1e7,25/sg),N=6000,last=0;
+    for(var i=0;i<=N;i++){var t=Tm*i/N;if(Math.abs(yStep(t,P.z,P.w0)-1)>0.05)last=t;}
+    return last+Tm/N/2;
+  }
+  function autoT(){
+    var z=P.z,w=P.w0;if(!(w>0))return 10;
+    var per=(Math.abs(z)<1)?2*PI/(w*Math.sqrt(1-z*z)):2*PI/w;
+    if(z<=0)return 6*per;
+    var t=t5();if(t===null)return 6*per;
+    return Math.max(t*1.25,Math.min(per,t*3)*1.2);
+  }
+  function Teff(){var T=auto?autoT():P.T;return (T>0&&isFinite(T))?T:10;}
+
+  // ---- graduations « rondes » ----
+  function niceTicks(a,b,n){
+    var span=b-a;if(!(span>0))return [a];
+    var raw=span/n,p=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10)),m=raw/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,out=[];
+    for(var v=Math.ceil(a/st-1e-9)*st;v<=b+st*1e-9;v+=st)out.push(Math.round(v/st)*st);
+    return out;
+  }
+  var fmtTick=function(v,st){var d=Math.max(0,-Math.floor(Math.log(st)/Math.LN10+1e-9));var s=FR(v,Math.min(d,6));var m=s.match(/^(−?\d+)(,\d+)?$/);if(m&&Math.abs(v)>=10000)s=m[1].replace(/\B(?=(\d{3})+(?!\d))/g," ")+(m[2]||"");return s;};
+
+  // ---- tracé ----
+  var X0=60,X1=626,Y0=34,Y1=346;
+  var gMain=null,gCur=null,scl=null;
+  function draw(){
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var ink=cs("--ink"),red=cs("--red"),blue=cs("--blue"),green=cs("--green"),line=cs("--line"),muted=cs("--muted"),tr=cs("--trace"),ang=cs("--ang");
+    var T=Teff(),N=1800,sinf=P.K*P.e0,ts=[],ss=[];
+    var cap=3*Math.max(Math.abs(sinf),Math.abs(P.e0),1e-9);
+    var lo=Math.min(0,P.e0),hi=Math.max(0,P.e0,sinf),lo2=Math.min(lo,sinf);
+    for(var i=0;i<=N;i++){var t=T*i/N,s=sOut(t);if(!isFinite(s))s=(s>0||isNaN(s))?1e9:-1e9;s=Math.max(-1e9,Math.min(1e9,s));ts.push(t);ss.push(s);var sc2=Math.max(-cap,Math.min(cap,s));hi=Math.max(hi,sc2);lo2=Math.min(lo2,sc2);}
+    var ymin=Math.min(lo2,0),ymax=Math.max(hi,0);if(ymax-ymin<1e-12){ymax=ymin+1;}
+    var pad=(ymax-ymin)*0.08;ymax+=pad;if(ymin<0)ymin-=pad;
+    var tkY=niceTicks(ymin,ymax,6),tkX=niceTicks(0,T,7);
+    var X=function(t){return X0+(X1-X0)*t/T;},Y=function(v){return Y1-(Y1-Y0)*(v-ymin)/(ymax-ymin);};
+    scl={T:T,X:X,Y:Y,ymin:ymin,ymax:ymax};
+    var fs=14*LS;
+    var defs=el("defs",{});var cp=el("clipPath",{id:"clipPlot"},defs);el("rect",{x:X0,y:Y0,width:X1-X0,height:Y1-Y0},cp);
+    // grille et graduations
+    var stY=tkY.length>1?tkY[1]-tkY[0]:1,stX=tkX.length>1?tkX[1]-tkX[0]:T;
+    tkX.forEach(function(v){var x=X(v);el("line",{x1:x,y1:Y0,x2:x,y2:Y1,stroke:line,"stroke-width":1,"stroke-dasharray":"2 4"});
+      var t=el("text",{x:x,y:Y1+fs+4,"font-size":fs,"text-anchor":"middle"});t.textContent=fmtTick(v,stX);});
+    tkY.forEach(function(v){var y=Y(v);el("line",{x1:X0,y1:y,x2:X1,y2:y,stroke:line,"stroke-width":1,"stroke-dasharray":"2 4"});
+      var t=el("text",{x:X0-6,y:y+fs*0.35,"font-size":fs,"text-anchor":"end"});t.textContent=fmtTick(v,stY);});
+    el("line",{x1:X0,y1:Y0,x2:X0,y2:Y1,stroke:ink,"stroke-width":1.4});
+    var y0=Y(0);el("line",{x1:X0,y1:y0,x2:X1,y2:y0,stroke:ink,"stroke-width":1.4});
+    var tt=el("text",{x:(X0+X1)/2,y:Y1+fs*2+10,"font-size":fs*1.05,"text-anchor":"middle","font-style":"italic"});tt.textContent="t (s)";
+    var g=el("g",{"clip-path":"url(#clipPlot)"});
+    // bande à ±5 % et asymptote
+    if(showBd&&sinf!==0){var ya=Y(sinf*1.05),yb=Y(sinf*0.95);el("rect",{x:X0,y:Math.min(ya,yb),width:X1-X0,height:Math.abs(yb-ya),fill:green,"fill-opacity":.16},g);
+      el("line",{x1:X0,y1:ya,x2:X1,y2:ya,stroke:green,"stroke-width":1},g);el("line",{x1:X0,y1:yb,x2:X1,y2:yb,stroke:green,"stroke-width":1},g);}
+    if(showAs){var ys=Y(sinf);el("line",{x1:X0,y1:ys,x2:X1,y2:ys,stroke:tr,"stroke-width":1.6,"stroke-dasharray":"7 5"},g);}
+    // entrée
+    if(showIn){el("path",{d:"M"+X(0)+","+Y(0)+"L"+X(0)+","+Y(P.e0)+"L"+X1+","+Y(P.e0),fill:"none",stroke:blue,"stroke-width":2.4,"stroke-linejoin":"round"},g);}
+    // sortie
+    var d="";for(var j=0;j<=N;j++){d+=(j?"L":"M")+X(ts[j]).toFixed(1)+","+Y(ss[j]).toFixed(1);}
+    el("path",{d:d,fill:"none",stroke:red,"stroke-width":2.6,"stroke-linejoin":"round"},g);
+    // mesures (derrière le mot de passe) : repères et valeurs lues sur la courbe, comme dans la correction du TD
+    var M=measures(), lab=null;
+    if(showM&&M){
+      var dash="4 3",S3=function(v){return FR(parseFloat(v.toPrecision(3)),6);};
+      lab=el("g",{});   // étiquettes hors du cadre de découpe, avec un halo pour rester lisibles
+      var addT=function(x,y,anchor,col,parts){var t=el("text",{x:x,y:y,"font-size":fs,"text-anchor":anchor,"class":"hal"},lab);t.style.fill=col;
+        var low=false;   // indice : la ligne de base descend de 0,3·fs, puis remonte au texte suivant
+        parts.forEach(function(p){var at={};if(p[1]){at["font-size"]=fs*0.72;if(!low)at.dy=fs*0.3;low=true;}else if(low){at.dy=-fs*0.3;low=false;}
+          var sp=el("tspan",at,t);sp.textContent=p[0];});};
+      var sup=function(x){return [x,true];},N0=function(x){return [x,false];};
+      if(M.kind==="osc"){
+        // oscillations visibles ? un écart d'au moins 5 px par rapport à s∞ est jugé lisible sur le tracé
+        var pxK=(Y1-Y0)/(ymax-ymin),vis=function(k){return Math.pow(M.D1,k)*Math.abs(sinf)*pxK>=5;};
+        var xm=X(M.t1),yP=Y(M.smax),n=0;
+        if(vis(1)&&M.t1<=T){
+          el("line",{x1:X0,y1:yP,x2:xm,y2:yP,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+          el("line",{x1:xm,y1:y0,x2:xm,y2:yP,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+          var xd=Math.max(X0+14,xm-10);vArrow(xd,Y(sinf),yP,ang,g);
+          addT(X0+6,yP-6,"start",ang,[N0("D"),["1",1],N0(" = (s"),["max",1],N0(" − s"),["∞",1],N0(")/s"),["∞",1],N0(" ≈ "+S3(M.D1))]);
+          // pseudo-période : sur n périodes tant que les oscillations restent bien visibles (n ≤ 4), sinon premier pic = demi-pseudo-période
+          for(var k=1;k<=4;k++){if(vis(2*k+1)&&M.t1+k*M.Tp<=T)n=k;else break;}
+          var yb2=y0-13;
+          if(n>=1){var xe=X(M.t1+n*M.Tp),se=sinf*(1+Math.pow(M.D1,2*n+1));
+            el("line",{x1:xe,y1:y0,x2:xe,y2:Y(se),stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+            arrow2(xm,xe,yb2,ang,g);
+            addT((xm+xe)/2,yb2-6,"middle",ang,(n>1?[N0(n+" T"),["p",1],N0(" ≈ "+S3(n*M.Tp)+" s ⇒ T"),["p",1],N0(" ≈ "+S3(M.Tp)+" s")]:[N0("T"),["p",1],N0(" ≈ "+S3(M.Tp)+" s")]));
+            M.method=n===1?"1 période":n+" périodes";}
+          else{arrow2(X(0),xm,yb2,ang,g);
+            addT(xm+8,yb2-6,"start",ang,[N0("t"),["1",1],N0(" ≈ "+S3(M.t1)+" s = T"),["p",1],N0("/2 ⇒ T"),["p",1],N0(" ≈ "+S3(M.Tp)+" s")]);
+            M.method="premier pic (T_p = 2·t₁)";}
+        }else{M.method="aucun pic lisible";}
+      }
+      if(M.kind==="und"&&M.Tp<T){var xe2=X(M.Tp),yb3=y0-13;
+        arrow2(X(0),xe2,yb3,ang,g);addT(xe2/2+X0/2,yb3-6,"middle",ang,[N0("T ≈ "+S3(M.Tp)+" s")]);}
+      if(M.t5&&M.t5<T&&sinf!==0){var x5=X(M.t5),yTop=Y(Math.max(sinf*1.05,sinf*0.95));
+        el("line",{x1:x5,y1:y0,x2:x5,y2:yTop,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+        var late=x5>X1-120;addT(late?x5-5:x5+5,y0-38,late?"end":"start",ang,[N0("t"),["5 %",1],N0(" ≈ "+S3(M.t5)+" s")]);}
+      if(sinf!==0){addT(X1-6,Y(sinf)+(sinf>0?fs+7:-8),"end",tr,[N0("s"),["∞",1],N0(" ≈ "+S3(sinf)+"\u00a0\u00a0\u00a0\u00a0K = s"),["∞",1],N0("/e"),["0",1],N0(" ≈ "+S3(P.K))]);}
+    }
+    // légende
+    var lx=X0+8,ly=14;
+    if(showIn){el("line",{x1:lx,y1:ly,x2:lx+26,y2:ly,stroke:blue,"stroke-width":2.4});var l1=el("text",{x:lx+32,y:ly+fs*0.35,"font-size":fs,"font-style":"italic"});l1.textContent="e(t)";lx+=32+fs*3.2;}
+    el("line",{x1:lx,y1:ly,x2:lx+26,y2:ly,stroke:red,"stroke-width":2.6});var l2=el("text",{x:lx+32,y:ly+fs*0.35,"font-size":fs,"font-style":"italic"});l2.textContent="s(t)";
+    gCur=el("g",{});
+    drawCursor();
+    readout(M);
+  }
+  function arrow2(xa,xb,y,col,g){var h=6;el("line",{x1:xa,y1:y,x2:xb,y2:y,stroke:col,"stroke-width":1.4},g);
+    el("path",{d:"M"+xa+","+y+"L"+(xa+h)+","+(y-3)+"L"+(xa+h)+","+(y+3)+"Z",fill:col},g);el("path",{d:"M"+xb+","+y+"L"+(xb-h)+","+(y-3)+"L"+(xb-h)+","+(y+3)+"Z",fill:col},g);}
+  function vArrow(x,ya,yb,col,g){var h=6,s=yb<ya?1:-1;el("line",{x1:x,y1:ya,x2:x,y2:yb,stroke:col,"stroke-width":1.4},g);
+    el("path",{d:"M"+x+","+yb+"L"+(x-3)+","+(yb+s*h)+"L"+(x+3)+","+(yb+s*h)+"Z",fill:col},g);el("path",{d:"M"+x+","+ya+"L"+(x-3)+","+(ya-s*h)+"L"+(x+3)+","+(ya-s*h)+"Z",fill:col},g);}
+
+  // ---- caractéristiques calculées ----
+  function measures(){
+    var z=P.z,w=P.w0,K=P.K,e0=P.e0,sinf=K*e0;if(!(w>0))return null;
+    var M={sinf:sinf,t5:t5()};
+    if(z>0&&z<1&&Math.abs(z-1)>1e-4){var wp=w*Math.sqrt(1-z*z),D=Math.exp(-PI*z/Math.sqrt(1-z*z));
+      M.kind="osc";M.wp=wp;M.Tp=2*PI/wp;M.D1=D;M.t1=PI/wp;M.smax=sinf*(1+D);M.s2=sinf*(1+D*D*D);M.tm=(PI-Math.acos(z))/wp;}
+    else if(z>=1-1e-4){M.kind="apr";}
+    else if(Math.abs(z)<1e-9){M.kind="und";M.Tp=2*PI/w;}
+    return M;
+  }
+  function readout(M){
+    document.getElementById("coef").textContent="a = 2z/ω₀ = "+SIG(2*P.z/P.w0)+" s ;  b = 1/ω₀² = "+SIG(1/(P.w0*P.w0))+" s²";
+    var w=[];if(P.z<0)w.push("z < 0 : le système est instable, la sortie diverge.");
+    if(P.z===0)w.push("z = 0 : oscillations non amorties (limite de stabilité).");
+    var T=Teff();if(P.w0>0&&Math.abs(P.z)<1&&T*P.w0*Math.sqrt(Math.max(1e-12,1-P.z*P.z))/(2*PI)>120)w.push("Durée affichée très grande devant la période : l'allure n'est plus lisible.");
+    document.getElementById("warn").textContent=w.join(" ");
+    var mes=document.getElementById("mes");
+    if(!showM||!M){mes.hidden=true;return;}
+    var L=["<div><b>Valeurs calculées</b> (mot de passe)</div>","<div>s<sub>∞</sub> = K·e₀ = "+SIG(M.sinf)+"</div>"];
+    if(M.kind==="osc"){if(M.method)L.push("<div>Mesure de T<sub>p</sub> : "+M.method+"</div>");L.push("<div>D₁ = "+SIG(M.D1)+" (soit "+SIG(M.D1*100)+" %)</div>","<div>ω<sub>p</sub> = "+SIG(M.wp)+" rad/s</div>","<div>T<sub>p</sub> = "+SIG(M.Tp)+" s</div>","<div>1<sup>er</sup> maximum : t<sub>1</sub> = "+SIG(M.t1)+" s</div>");}
+    if(M.kind==="und")L.push("<div>T = "+SIG(M.Tp)+" s</div>");
+    if(M.t5)L.push("<div>t<sub>5 %</sub> = "+SIG(M.t5)+" s</div>");
+    mes.innerHTML=L.join("");mes.hidden=false;
+  }
+
+  // ---- lecture au pointeur ----
+  function drawCursor(){
+    if(!gCur)return;while(gCur.firstChild)gCur.removeChild(gCur.firstChild);
+    var out=document.getElementById("curs");
+    if(cursT===null||!scl){out.textContent="Pointeur : —";return;}
+    var t=cursT,s=sOut(t),x=scl.X(t),ink=cs("--ink"),red=cs("--red");
+    el("line",{x1:x,y1:Y0,x2:x,y2:Y1,stroke:ink,"stroke-width":1,opacity:.55},gCur);
+    if(isFinite(s)&&s>=scl.ymin&&s<=scl.ymax)el("circle",{cx:x,cy:scl.Y(s),r:4.2,fill:red,stroke:cs("--panel"),"stroke-width":1.5},gCur);
+    out.textContent="t = "+SIG(t)+" s ;  s(t) = "+SIG(s)+" ;  e(t) = "+SIG(P.e0);
+  }
+  function moveCur(e){var r=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal,x=vb.x+(e.clientX-r.left)*vb.width/r.width;
+    if(x<X0||x>X1){cursT=null;}else{cursT=(x-X0)/(X1-X0)*scl.T;}drawCursor();}
+  svg.addEventListener("pointermove",moveCur);svg.addEventListener("pointerdown",moveCur);
+  svg.addEventListener("pointerleave",function(e){if(e.pointerType==="mouse"){cursT=null;drawCursor();}});
+
+  // ---- curseurs et champs numériques ----
+  function sliderVal(d){var v=P[d.id];return d.log?Math.log(Math.max(v,1e-30))/Math.LN10:v;}
+  function fromSlider(d,x){return d.log?Math.pow(10,x):x;}
+  function syncUI(skip){
+    DEFS.forEach(function(d){
+      var s=document.getElementById("p_"+d.id),n=document.getElementById("n_"+d.id);
+      if(document.activeElement!==s)s.value=sliderVal(d);
+      if(document.activeElement!==n){var v=(d.id==="T"&&auto)?Teff():P[d.id];n.value=String(parseFloat(v.toPrecision(5)));}
+      n.disabled=(d.id==="T"&&auto);s.disabled=(d.id==="T"&&auto);
+    });
+  }
+  DEFS.forEach(function(d){
+    var s=document.getElementById("p_"+d.id),n=document.getElementById("n_"+d.id);
+    s.min=d.min;s.max=d.max;s.step=d.step;
+    s.addEventListener("input",function(){var v=fromSlider(d,+s.value);if(d.id!=="z"&&d.id!=="e0"&&d.id!=="K")v=parseFloat(v.toPrecision(3));P[d.id]=v;syncUI();draw();});
+    n.addEventListener("input",function(){var v=parseFloat(n.value.replace(",","."));if(!isFinite(v))return;if(d.log&&!(v>0))return;P[d.id]=v;syncUI();draw();});
+    n.addEventListener("blur",function(){syncUI();});
+  });
+  document.querySelectorAll(".row button").forEach(function(b){b.addEventListener("click",function(){
+    var d=DEFS.filter(function(x){return x.id===b.dataset.k;})[0],dir=+b.dataset.d;
+    if(dir===0){P[d.id]=DEF[d.id];}
+    else if(d.log){P[d.id]=P[d.id]*Math.pow(10,dir*0.05);}
+    else{P[d.id]=Math.round((P[d.id]+dir*d.step)*1e6)/1e6;}
+    syncUI();draw();});});
+  document.getElementById("oAuto").addEventListener("change",function(e){auto=e.target.checked;syncUI();draw();});
+  document.getElementById("oIn").addEventListener("change",function(e){showIn=e.target.checked;draw();});
+  document.getElementById("oAs").addEventListener("change",function(e){showAs=e.target.checked;draw();});
+  document.getElementById("oBd").addEventListener("change",function(e){showBd=e.target.checked;draw();});
+  document.getElementById("oM").addEventListener("change",function(e){showM=e.target.checked;draw();});
+  document.getElementById("rinit").addEventListener("click",function(){P={e0:DEF.e0,K:DEF.K,z:DEF.z,w0:DEF.w0,T:DEF.T};syncUI();draw();});
+  document.getElementById("rtd").addEventListener("click",function(){if(!unlocked)return;P={e0:TD.e0,K:TD.K,z:TD.z,w0:TD.w0,T:TD.T};syncUI();draw();});
+
+  // ---- options réservées à l'enseignant (empreinte du code, comme les autres pages) ----
+  var CODE_H=2732556272, CODE_KEY="so-mdp";   // mot de passe de cette page (comparé par empreinte ; majuscules, accents, cédille et séparateurs sont ignorés)
+  function codeHash(s){s=String(s).toLowerCase();try{s=s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");}catch(e){s=s.replace(/[àâä]/g,"a").replace(/[éèêë]/g,"e").replace(/[îï]/g,"i").replace(/[ôö]/g,"o").replace(/[ùûü]/g,"u").replace(/ç/g,"c");}
+    s=s.replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");var h=5381,i;for(i=0;i<s.length;i++)h=(((h*33)^s.charCodeAt(i))>>>0);return h;}
+  window.codeHash=codeHash;   // console : codeHash("nouveau mot de passe") puis remplacer CODE_H
+  var unlocked=false;try{unlocked=localStorage.getItem(CODE_KEY)===String(CODE_H);}catch(e){}
+  function applyLock(){
+    var rtd=document.getElementById("rtd");rtd.disabled=!unlocked;rtd.title=unlocked?"Courbe de l'exercice « Identification d'un deuxième ordre » du TD":"Mot de passe requis";
+    document.getElementById("lM").hidden=!unlocked;document.getElementById("clock").hidden=!unlocked;document.getElementById("cbtn").hidden=unlocked;
+    if(unlocked)document.getElementById("cbox").hidden=true;
+    if(!unlocked){showM=false;document.getElementById("oM").checked=false;}
+    draw();}
+  document.getElementById("cbtn").addEventListener("click",function(){var b=document.getElementById("cbox");b.hidden=!b.hidden;if(!b.hidden)document.getElementById("cin").focus();});
+  function tryCode(){var i=document.getElementById("cin");
+    if(codeHash(i.value)===CODE_H){unlocked=true;try{localStorage.setItem(CODE_KEY,String(CODE_H));}catch(e){}i.value="";applyLock();}
+    else{i.value="";i.placeholder="mot de passe incorrect";}}
+  document.getElementById("cok").addEventListener("click",tryCode);
+  document.getElementById("cin").addEventListener("keydown",function(e){if(e.key==="Enter")tryCode();});
+  document.getElementById("clock").addEventListener("click",function(){unlocked=false;try{localStorage.removeItem(CODE_KEY);}catch(e){}applyLock();});
+
+  // ---- thème, polices, taille de l'affichage ----
+  if(window.matchMedia)window.matchMedia("(prefers-color-scheme: dark)").addEventListener&&window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+  var KEY="secondordre-zoom", Z=1, manual=null;
+  try{var sv=parseFloat(localStorage.getItem(KEY));if(sv>0)manual=sv;}catch(e){}
+  function autoZoom(){
+    var touch=window.matchMedia("(hover:none) and (pointer:coarse)").matches, w=window.innerWidth, h=window.innerHeight;
+    if(!touch||h<w)return 1;
+    var ref=Math.min(screen.width||w,screen.height||w);
+    if(w>ref*1.25)return Math.min(3,w/ref);
+    if(w>420&&w<=600)return w/412;
+    return 1;
+  }
+  function applyZoom(){
+    Z=manual!==null?manual:autoZoom(); Z=Math.max(0.8,Math.min(3,Z));
+    document.documentElement.style.setProperty("--z",Z.toFixed(2));
+    LS=Math.min(1.6,1+(Z-1)*0.35);
+    document.getElementById("info").textContent="Affichage ×"+Z.toFixed(2).replace(".",",")+(manual===null?" (auto)":"")+" · page "+window.innerWidth+" px, écran "+(screen.width||"?")+" px, densité "+(window.devicePixelRatio||1);
+    draw();
+  }
+  function setManual(v){manual=v;try{if(v===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,v);}catch(e){}applyZoom();}
+  document.getElementById("zp").addEventListener("click",function(){setManual(Math.min(3,Math.round((Z+0.15)*100)/100));});
+  document.getElementById("zm").addEventListener("click",function(){setManual(Math.max(0.8,Math.round((Z-0.15)*100)/100));});
+  document.getElementById("za").addEventListener("click",function(){setManual(null);});
+  window.addEventListener("resize",function(){if(manual===null)applyZoom();});
+
+  // plein écran (API native si disponible, sinon figure plaquée sur toute la fenêtre)
+  (function(){var fg=document.querySelector(".fig"),fb=document.getElementById("fsb");
+    function isFs(){return fg.classList.contains("fs");}
+    function setFs(on){fg.classList.toggle("fs",on);fb.textContent=on?"Quitter":"Plein écran";document.body.style.overflow=on?"hidden":"";}
+    fb.addEventListener("click",function(){
+      if(isFs()){if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}setFs(false);return;}
+      var rq=fg.requestFullscreen||fg.webkitRequestFullscreen;setFs(true);
+      if(rq){try{var r=rq.call(fg);if(r&&r.catch)r.catch(function(){});}catch(e){}}});
+    function onChange(){if(!document.fullscreenElement&&!document.webkitFullscreenElement&&isFs()&&fg.dataset.api==="1"){fg.dataset.api="";setFs(false);}else if(document.fullscreenElement||document.webkitFullscreenElement){fg.dataset.api="1";}}
+    document.addEventListener("fullscreenchange",onChange);document.addEventListener("webkitfullscreenchange",onChange);
+    document.addEventListener("keydown",function(e){if(e.key==="Escape"&&isFs()&&!document.fullscreenElement&&!document.webkitFullscreenElement)setFs(false);});
+  })();
+  syncUI();applyZoom();applyLock();
+})();
+</script>
+
+</body>
+</html>
