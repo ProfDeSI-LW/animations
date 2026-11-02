@@ -61,6 +61,8 @@ svg{display:block;width:100%;height:auto;max-height:80vh;cursor:crosshair;touch-
 .row label{font-family:var(--font-math);font-size:1.15rem;font-style:italic}
 .row output{font-variant-numeric:tabular-nums;text-align:right}
 .row input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.rw{position:relative;display:block;min-width:0}.rw input{display:block}
+.zm,.zml{display:none}   /* repères de z : affichés seulement en mode tactile (sur ordinateur : graduations natives du curseur) */
 .row.v label{font-size:1rem;color:var(--muted)}
 .row.v output{color:var(--muted);font-size:.88rem}
 .row button{padding:0;height:1.9rem;width:1.9rem;line-height:1;font-size:1.05rem}
@@ -89,9 +91,18 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
   .layout{grid-template-columns:minmax(0,1fr)}
   .fig{position:sticky;top:6px;z-index:5;padding:2px}
   svg{max-height:44vh}
-  .row{grid-template-columns:1.6em 2.4rem minmax(0,1fr) 2.4rem 2.4rem 10.5ch}
-  .row button{height:2.4rem;width:2.4rem;font-size:1.2rem}
-  .row input[type=range]{height:1.9rem}
+  /* un paramètre = 1 ligne : [nom][ ====curseur==== ][valeur] ; les boutons − + ↺ sont masqués (la valeur se tape, le curseur est large) */
+  .row{grid-template-columns:1.6em minmax(0,1fr) 10ch;column-gap:8px}
+  .row>button{display:none}
+  .row input.num{font-size:1rem;padding:5px 6px}
+  .row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:2.4rem;margin:0;touch-action:pan-y}
+  .row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
+  .row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);border:3px solid var(--panel);margin-top:-10px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
+  .row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid var(--panel)}
+  .rw{padding-bottom:12px}
+  .zm{display:block;position:absolute;top:calc((100% - 12px)/2 - 10px);width:2px;height:20px;background:var(--ink);opacity:.5;border-radius:1px;pointer-events:none;transform:translateX(-1px)}
+  .zml{display:block;position:absolute;bottom:-4px;font-size:.62rem;color:var(--muted);pointer-events:none;transform:translateX(-50%);white-space:nowrap}
   .actions button{min-height:2.5rem;padding:6px 12px}
   .zoom button{min-width:2.5rem;height:2.5rem}
   .opts label{min-height:2.2rem}
@@ -134,7 +145,7 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
         <div class="cap">gain statique</div>
       </div>
       <div class="grp">
-        <div class="row"><label for="p_z" title="coefficient d'amortissement (sans unité)">z</label><button data-k="z" data-d="-1" aria-label="Diminuer z">−</button><input id="p_z" type="range" aria-label="z" list="zticks"><datalist id="zticks"><option value="0.69"></option><option value="1"></option></datalist><button data-k="z" data-d="1" aria-label="Augmenter z">+</button><button data-k="z" data-d="0" aria-label="Valeur initiale de z" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_z" type="number" step="any" inputmode="decimal" aria-label="z, valeur exacte"><i></i></span></div>
+        <div class="row"><label for="p_z" title="coefficient d'amortissement (sans unité)">z</label><button data-k="z" data-d="-1" aria-label="Diminuer z">−</button><span class="rw" id="zrw"><input id="p_z" type="range" aria-label="z" list="zticks"><datalist id="zticks"><option value="0.69"></option><option value="1"></option></datalist><span class="zm" data-v="0.69"></span><span class="zm" data-v="1"></span><b class="zml" data-v="0.69" style="font-weight:400">0,69</b><b class="zml" data-v="1" style="font-weight:400">1</b></span><button data-k="z" data-d="1" aria-label="Augmenter z">+</button><button data-k="z" data-d="0" aria-label="Valeur initiale de z" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_z" type="number" step="any" inputmode="decimal" aria-label="z, valeur exacte"><i></i></span></div>
         <div class="cap" id="zcap">coefficient d'amortissement (sans unité)</div>
       </div>
       <div class="grp">
@@ -360,10 +371,20 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
   }
   // valeurs particulières de z : le curseur « accroche » à 0,69 et 1 (±0,02) ; la légende les signale
   var ZSPEC=[{v:0.69,t:"z = 0,69 : premier dépassement D\u2081 \u2248 5 % \u2192 temps de réponse à 5 % minimal"},{v:1,t:"z = 1 : amortissement critique \u2192 réponse la plus rapide sans dépassement"}];
-  function snapZ(v){for(var i=0;i<ZSPEC.length;i++){if(Math.abs(v-ZSPEC[i].v)<=0.0201)return ZSPEC[i].v;}return v;}
+  var zLast=null;
+  function snapRadius(){var el=document.getElementById("p_z"),w=el?el.getBoundingClientRect().width:0;if(!(w>60))return 0.0201;
+    return Math.max(0.0201,Math.min(0.06,14*3/(w-28)));}   // ~14 px de part et d'autre de la valeur particulière (borné : 0,02 à 0,06)
+  function snapZ(v){var r=snapRadius();for(var i=0;i<ZSPEC.length;i++){if(Math.abs(v-ZSPEC[i].v)<=r){
+      if(zLast!==ZSPEC[i].v){zLast=ZSPEC[i].v;try{if(navigator.vibrate)navigator.vibrate(12);}catch(e){}}
+      return ZSPEC[i].v;}}zLast=null;return v;}
+  // position des repères sur la piste (largeur de la poignée prise en compte)
+  function placeMarks(){var el=document.getElementById("p_z");if(!el)return;var th=window.matchMedia("(max-width:780px), (hover:none) and (pointer:coarse)").matches?26:16;
+    var w=el.getBoundingClientRect().width;document.querySelectorAll("#zrw .zm,#zrw .zml").forEach(function(m){
+      var f=(+m.dataset.v-0)/3;m.style.left=(th/2+(w-th)*f)+"px";});}
   function zCaption(){var c=document.getElementById("zcap");if(!c)return;var t="coefficient d'amortissement (sans unité)";
     for(var i=0;i<ZSPEC.length;i++){if(Math.abs(P.z-ZSPEC[i].v)<1e-9){t=ZSPEC[i].t;}}
     c.textContent=t;c.style.fontWeight=(t.indexOf("z =")===0)?"600":"";}
+  window.addEventListener("resize",placeMarks);setTimeout(placeMarks,0);
   DEFS.forEach(function(d){
     var s=document.getElementById("p_"+d.id),n=document.getElementById("n_"+d.id);
     s.min=d.min;s.max=d.max;s.step=d.step;
