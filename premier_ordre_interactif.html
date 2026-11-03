@@ -1,0 +1,388 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Premier ordre interactif</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=STIX+Two+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+/* Réponse indicielle d'un premier ordre : tracé analytique de s(t) ; rouge = sortie, bleu = entrée, orange = asymptote, vert = bande à 5 %, violet = mesures. */
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --ink:#1d2330; --muted:#5d6678; --line:#d5d9e2;
+  --plateau:#8f97a6; --red:#b3141b; --blue:#1a2bb8; --green:#0a7a2f; --accent:#1a2bb8; --trace:#c26a00; --ang:#7b2fbf;
+  --font-ui:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-math:"STIX Two Text","Latin Modern Roman","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+    --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+  --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.nv{display:flex;align-items:center;gap:3px;min-width:0}
+.nv i{font-style:normal;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.row input.num{width:100%;min-width:0;font:inherit;font-size:.85rem;color:var(--ink);padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);text-align:right;-moz-appearance:textfield}
+.row input.num::-webkit-inner-spin-button,.row input.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+.dimsX{border-top:1px solid var(--line);padding-top:8px}
+.dims summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+.dim{display:grid;grid-template-columns:7.2em minmax(0,1fr) 3.4em;gap:8px;align-items:center;margin-top:6px;font-size:.88rem}
+.dim label{font-family:var(--font-math);font-style:italic}
+.dim output{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.dim input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.dims .lnk{margin-top:8px}
+
+[hidden]{display:none !important}
+.lnk{border:0;background:none;padding:0;color:var(--muted);font-size:.8rem;text-decoration:underline;cursor:pointer}
+.codeline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.codeline input{font:inherit;font-size:.85rem;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:8.5rem}
+.codeline button:not(.lnk){padding:2px 9px;font-size:.85rem}
+
+html{font-size:calc(16px * var(--z,1))}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:.94rem;line-height:1.45;
+  padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.3rem;font-weight:600;margin:0;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.zoom{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem}
+.zoom button{min-width:2.1rem;height:2.1rem;padding:0 6px}
+.info{font-size:.75rem;color:var(--muted)}
+.sub{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 20rem;gap:14px;align-items:start}
+@media (max-width:780px){.layout{grid-template-columns:minmax(0,1fr)}}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;position:relative}
+svg{display:block;width:100%;height:auto;max-height:80vh;cursor:crosshair;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.ctrl{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grp{display:flex;flex-direction:column;gap:4px}
+.row{display:grid;grid-template-columns:1.7em 1.9rem minmax(0,1fr) 1.9rem 1.9rem 10.5ch;gap:4px;align-items:center}
+.row label{font-family:var(--font-math);font-size:1.15rem;font-style:italic}
+.row output{font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.row.v label{font-size:1rem;color:var(--muted)}
+.row.v output{color:var(--muted);font-size:.88rem}
+.row button{padding:0;height:1.9rem;width:1.9rem;line-height:1;font-size:1.05rem}
+.cap{font-size:.82rem;color:var(--muted);margin-top:2px}
+.sep{border:0;border-top:1px solid var(--line);margin:0}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line)}
+svg text.hal{paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+button.main{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+.opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.line2{display:flex;gap:18px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.read{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.read b{color:var(--ink);font-weight:600}
+.num{font-variant-numeric:tabular-nums;color:var(--ink)}
+svg text{font-family:var(--font-math);fill:var(--ink)}
+/* Mode « téléphone / tablette tactile » : écran étroit OU écran tactile sans survol (la résolution seule ne suffit pas) */
+@media (max-width:780px), (hover:none) and (pointer:coarse){
+  body{padding-block:8px;-webkit-text-size-adjust:100%}
+  main{gap:8px}
+  h1{font-size:1.1rem}.sub{display:none}
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .fig{position:sticky;top:6px;z-index:5;padding:2px}
+  svg{max-height:44vh}
+  /* un paramètre = 1 ligne : [nom][ ====curseur==== ][valeur] ; les boutons − + ↺ sont masqués (la valeur se tape, le curseur est large) */
+  .row{grid-template-columns:1.6em minmax(0,1fr) 10ch;column-gap:8px}
+  .row>button{display:none}
+  .row input.num{font-size:1rem;padding:5px 6px}
+  .row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:2.4rem;margin:0;touch-action:pan-y}
+  .row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
+  .row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);border:3px solid var(--panel);margin-top:-10px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
+  .row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid var(--panel)}
+  .actions button{min-height:2.5rem;padding:6px 12px}
+  .zoom button{min-width:2.5rem;height:2.5rem}
+  .opts label{min-height:2.2rem}
+  .ctrl{padding:10px;gap:10px}
+}
+/* téléphone en paysage : figure fixe à gauche, réglages à droite */
+@media (hover:none) and (pointer:coarse) and (orientation:landscape), (max-height:520px) and (orientation:landscape){
+  .layout{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
+  svg{max-height:calc(100vh - 28px)}
+}
+.figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+.figtools button{padding:3px 9px;font-size:.85rem}
+.warn{color:var(--red);font-size:.85rem}
+.mes{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.mes b{color:var(--ink);font-weight:600}
+.fig.fs{position:fixed;inset:0;z-index:100;border-radius:0;border:0;padding:0;display:flex}
+.fig.fs svg{width:100%;height:100%;max-height:none}
+</style></head><body>
+
+<main>
+  <div class="top">
+   <div>
+    <h1>Réponse d'un premier ordre à un échelon</h1>
+    <p class="sub">H(p) = K / (1 + τ·p). Modifiez les paramètres avec les curseurs ou tapez une valeur exacte, et observez la réponse s(t) à l'échelon e(t). Passez le pointeur sur la courbe pour lire les valeurs.</p>
+   </div>
+   <div class="zoom" role="group" aria-label="Taille de l'affichage">Taille <button id="zm" aria-label="Réduire l'affichage">A−</button><button id="zp" aria-label="Agrandir l'affichage">A+</button><button id="za" aria-label="Taille automatique" title="Taille automatique">auto</button></div>
+  </div>
+  <div class="layout">
+    <div class="fig">
+      <div class="figtools"><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
+      <svg id="fig" viewBox="0 0 640 400" role="img" aria-label="Réponse indicielle d'un système du premier ordre : entrée e(t) et sortie s(t) en fonction du temps"></svg>
+    </div>
+    <div class="ctrl">
+      <div class="grp">
+        <div class="row"><label for="p_e0" title="amplitude de l'échelon : e(t) = E₀·u(t)">E₀</label><button data-k="e0" data-d="-1" aria-label="Diminuer E₀">−</button><input id="p_e0" type="range" aria-label="E₀"><button data-k="e0" data-d="1" aria-label="Augmenter E₀">+</button><button data-k="e0" data-d="0" aria-label="Valeur initiale de E₀" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_e0" type="number" step="any" inputmode="decimal" aria-label="E₀, valeur exacte"><i></i></span></div>
+        <div class="cap">amplitude de l'échelon : e(t) = E₀·u(t)</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_K" title="gain statique">K</label><button data-k="K" data-d="-1" aria-label="Diminuer K">−</button><input id="p_K" type="range" aria-label="K"><button data-k="K" data-d="1" aria-label="Augmenter K">+</button><button data-k="K" data-d="0" aria-label="Valeur initiale de K" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_K" type="number" step="any" inputmode="decimal" aria-label="K, valeur exacte"><i></i></span></div>
+        <div class="cap">gain statique</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_tau" title="constante de temps">τ</label><button data-k="tau" data-d="-1" aria-label="Diminuer τ">−</button><input id="p_tau" type="range" aria-label="τ"><button data-k="tau" data-d="1" aria-label="Augmenter τ">+</button><button data-k="tau" data-d="0" aria-label="Valeur initiale de τ" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_tau" type="number" step="any" inputmode="decimal" aria-label="τ, valeur exacte"><i>s</i></span></div>
+        <div class="cap" id="taucap">constante de temps</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="p_T" title="durée affichée (axe du temps)">t</label><button data-k="T" data-d="-1" aria-label="Diminuer t">−</button><input id="p_T" type="range" aria-label="t"><button data-k="T" data-d="1" aria-label="Augmenter t">+</button><button data-k="T" data-d="0" aria-label="Valeur initiale de t" title="Valeur initiale">↺</button><span class="nv"><input class="num" id="n_T" type="number" step="any" inputmode="decimal" aria-label="t, valeur exacte"><i>s</i></span></div>
+        <div class="cap">durée affichée (axe du temps)</div>
+      </div>
+      <label class="chk"><input id="oAuto" type="checkbox"><span>Durée automatique</span></label>
+      <div class="actions"><button id="rinit">Valeurs initiales</button><button id="rtd" title="Courbe d'identification du TD sur le moteur à courant continu : E₀ = 1,5 ; K = 4,2 ; τ = 2,5 s">Valeurs du TD</button></div>
+      <hr class="sep">
+      <div class="opts">
+        <label><input id="oIn" type="checkbox" checked><span>Afficher l'entrée e(t)</span></label>
+        <label><input id="oAs" type="checkbox"><span>Afficher l'asymptote s<sub>∞</sub></span></label>
+        <label><input id="oBd" type="checkbox"><span>Afficher la bande à ±5 %</span></label>
+        <label><input id="oTg" type="checkbox"><span>Afficher la tangente à l'origine</span></label>
+        <label id="lM"><input id="oM" type="checkbox"><span>Afficher les mesures (point à 63 %, τ, t<sub>5 %</sub>)</span></label>
+      </div>
+      <hr class="sep">
+      <div class="read" aria-live="off">
+        <div><b>Forme canonique</b> : H(p) = K / (1 + τ·p)</div>
+        <div class="num" id="coef"></div>
+        <div class="num" id="curs">Pointeur : —</div>
+        <div class="warn" id="warn"></div>
+      </div>
+      <div class="mes" id="mes" hidden></div>
+    </div>
+  </div>
+  <div class="info" id="info"></div>
+</main>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg", PI=Math.PI;
+  var svg=document.getElementById("fig");
+  var LS=1;
+  var DEF={e0:1,K:2,tau:1,T:6}, TD={e0:1.5,K:4.2,tau:2.5,T:18};
+  var P={e0:DEF.e0,K:DEF.K,tau:DEF.tau,T:DEF.T}, auto=false, showIn=true, showAs=false, showBd=false, showTg=false, showM=false, cursT=null;
+  // curseurs : linéaires (E₀, K) ou logarithmiques (τ, durée : le curseur porte log10 de la valeur)
+  var DEFS=[{id:"e0",min:0,max:5,step:0.1,log:false},{id:"K",min:0,max:10,step:0.1,log:false},{id:"tau",min:-2,max:3,step:0.01,log:true},{id:"T",min:-1,max:4,step:0.01,log:true}];
+  var cs=function(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();};
+  function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+  var FR=function(v,d){var s=(Math.abs(v)<1e-12?0:v).toFixed(d===undefined?3:d);if(s.indexOf(".")>=0)s=s.replace(/0+$/,"").replace(/\.$/,"");return s.replace("-","−").replace(".",",");};
+  var SIG=function(v){if(!isFinite(v))return "—";var a=Math.abs(v);if(a===0)return "0";if(a>=1e5||a<1e-3)return v.toExponential(2).replace("e+","·10^").replace("e","·10^").replace(".",",").replace("-","−").replace("^−","^−");return FR(parseFloat(v.toPrecision(4)),6);};
+
+  // ---- réponse indicielle normalisée y(t) = s(t)/(K E₀) = 1 - exp(-t/τ) pour H(p) = 1/(1 + τ p) ----
+  function yStep(t,tau){return t<0?0:1-Math.exp(-t/tau);}
+  function sOut(t){return P.K*P.e0*yStep(t,P.tau);}
+  var LN20=Math.log(20);
+  function t5(){return P.tau>0?P.tau*LN20:null;}   // 1 - exp(-t/τ) = 0,95 ⇒ t = τ·ln 20 ≈ 3 τ
+  function autoT(){return (P.tau>0)?6*P.tau:10;}   // 6 τ : réponse établie à 99,7 %
+  function Teff(){var T=auto?autoT():P.T;return (T>0&&isFinite(T))?T:10;}
+
+  // ---- graduations « rondes » ----
+  function niceTicks(a,b,n){
+    var span=b-a;if(!(span>0))return [a];
+    var raw=span/n,p=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10)),m=raw/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,out=[];
+    for(var v=Math.ceil(a/st-1e-9)*st;v<=b+st*1e-9;v+=st)out.push(Math.round(v/st)*st);
+    return out;
+  }
+  var fmtTick=function(v,st){var d=Math.max(0,-Math.floor(Math.log(st)/Math.LN10+1e-9));var s=FR(v,Math.min(d,6));var m=s.match(/^(−?\d+)(,\d+)?$/);if(m&&Math.abs(v)>=10000)s=m[1].replace(/\B(?=(\d{3})+(?!\d))/g," ")+(m[2]||"");return s;};
+
+  // ---- tracé ----
+  var X0=60,X1=626,Y0=34,Y1=346;
+  var gMain=null,gCur=null,scl=null;
+  function draw(){
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var ink=cs("--ink"),red=cs("--red"),blue=cs("--blue"),green=cs("--green"),line=cs("--line"),muted=cs("--muted"),tr=cs("--trace"),ang=cs("--ang");
+    var T=Teff(),N=1800,sinf=P.K*P.e0,ts=[],ss=[];
+    for(var i=0;i<=N;i++){var t=T*i/N;ts.push(t);ss.push(sOut(t));}
+    var ymin=Math.min(0,P.e0,sinf),ymax=Math.max(0,P.e0,sinf);if(ymax-ymin<1e-12){ymax=ymin+1;}
+    var pad=(ymax-ymin)*0.08;ymax+=pad;if(ymin<0)ymin-=pad;
+    var tkY=niceTicks(ymin,ymax,6),tkX=niceTicks(0,T,7);
+    var X=function(t){return X0+(X1-X0)*t/T;},Y=function(v){return Y1-(Y1-Y0)*(v-ymin)/(ymax-ymin);};
+    scl={T:T,X:X,Y:Y,ymin:ymin,ymax:ymax};
+    var fs=14*LS;
+    var defs=el("defs",{});var cp=el("clipPath",{id:"clipPlot"},defs);el("rect",{x:X0,y:Y0,width:X1-X0,height:Y1-Y0},cp);
+    // grille et graduations
+    var stY=tkY.length>1?tkY[1]-tkY[0]:1,stX=tkX.length>1?tkX[1]-tkX[0]:T;
+    tkX.forEach(function(v){var x=X(v);el("line",{x1:x,y1:Y0,x2:x,y2:Y1,stroke:line,"stroke-width":1,"stroke-dasharray":"2 4"});
+      var t=el("text",{x:x,y:Y1+fs+4,"font-size":fs,"text-anchor":"middle"});t.textContent=fmtTick(v,stX);});
+    tkY.forEach(function(v){var y=Y(v);el("line",{x1:X0,y1:y,x2:X1,y2:y,stroke:line,"stroke-width":1,"stroke-dasharray":"2 4"});
+      var t=el("text",{x:X0-6,y:y+fs*0.35,"font-size":fs,"text-anchor":"end"});t.textContent=fmtTick(v,stY);});
+    el("line",{x1:X0,y1:Y0,x2:X0,y2:Y1,stroke:ink,"stroke-width":1.4});
+    var y0=Y(0);el("line",{x1:X0,y1:y0,x2:X1,y2:y0,stroke:ink,"stroke-width":1.4});
+    var tt=el("text",{x:(X0+X1)/2,y:Y1+fs*2+10,"font-size":fs*1.05,"text-anchor":"middle","font-style":"italic"});tt.textContent="t (s)";
+    var g=el("g",{"clip-path":"url(#clipPlot)"});
+    // bande à ±5 % et asymptote
+    if(showBd&&sinf!==0){var ya=Y(sinf*1.05),yb=Y(sinf*0.95);el("rect",{x:X0,y:Math.min(ya,yb),width:X1-X0,height:Math.abs(yb-ya),fill:green,"fill-opacity":.16},g);
+      el("line",{x1:X0,y1:ya,x2:X1,y2:ya,stroke:green,"stroke-width":1},g);el("line",{x1:X0,y1:yb,x2:X1,y2:yb,stroke:green,"stroke-width":1},g);}
+    if(showAs){var ys=Y(sinf);el("line",{x1:X0,y1:ys,x2:X1,y2:ys,stroke:tr,"stroke-width":1.6,"stroke-dasharray":"7 5"},g);}
+    // entrée
+    if(showIn){el("path",{d:"M"+X(0)+","+Y(0)+"L"+X(0)+","+Y(P.e0)+"L"+X1+","+Y(P.e0),fill:"none",stroke:blue,"stroke-width":2.4,"stroke-linejoin":"round"},g);}
+    // sortie
+    var d="";for(var j=0;j<=N;j++){d+=(j?"L":"M")+X(ts[j]).toFixed(1)+","+Y(ss[j]).toFixed(1);}
+    el("path",{d:d,fill:"none",stroke:red,"stroke-width":2.6,"stroke-linejoin":"round"},g);
+    // tangente à l'origine : pente K·E₀/τ, coupe l'asymptote en t = τ
+    if(showTg&&sinf!==0&&P.tau>0){el("line",{x1:X(0),y1:Y(0),x2:X(P.tau),y2:Y(sinf),stroke:ang,"stroke-width":1.6},g);
+      if(P.tau<T){el("line",{x1:X(P.tau),y1:y0,x2:X(P.tau),y2:Y(sinf),stroke:ang,"stroke-width":1.1,"stroke-dasharray":"4 3"},g);}}
+    // mesures (derrière le mot de passe) : repères et valeurs lues sur la courbe, comme dans la correction du TD
+    var M=measures(), lab=null;
+    if(showM&&M&&sinf!==0){
+      var dash="4 3",S3=function(v){return FR(parseFloat(v.toPrecision(3)),6);};
+      lab=el("g",{});
+      var addT=function(x,y,anchor,col,parts){var t=el("text",{x:x,y:y,"font-size":fs,"text-anchor":anchor,"class":"hal"},lab);t.style.fill=col;
+        var low=false;
+        parts.forEach(function(p){var at={};if(p[1]){at["font-size"]=fs*0.72;if(!low)at.dy=fs*0.3;low=true;}else if(low){at.dy=-fs*0.3;low=false;}
+          var sp=el("tspan",at,t);sp.textContent=p[0];});};
+      var sup=function(x){return [x,true];},N0=function(x){return [x,false];};
+      var y63=Y(0.632*sinf);
+      // point à 63 % de s∞ : abscisse t = τ
+      el("line",{x1:X0,y1:y63,x2:X(P.tau),y2:y63,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+      el("line",{x1:X(P.tau),y1:y0,x2:X(P.tau),y2:y63,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+      if(P.tau<T){el("circle",{cx:X(P.tau),cy:y63,r:4.2,fill:ang,stroke:cs("--panel"),"stroke-width":1.5},g);
+        var late1=X(P.tau)>X1-90;addT(late1?X(P.tau)-6:X(P.tau)+6,y0+(sinf>0?-8:fs+6),late1?"end":"start",ang,[N0("τ ≈ "+S3(P.tau)+" s")]);}
+      addT(X0+6,y63+(sinf>0?-6:fs+4),"start",ang,[N0("0,632·s"),["∞",1],N0(" ≈ "+S3(0.632*sinf))]);
+      if(M.t5&&M.t5<T){var x5=X(M.t5),yTop=Y(Math.max(sinf*1.05,sinf*0.95));
+        el("line",{x1:x5,y1:y0,x2:x5,y2:yTop,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
+        var late=x5>X1-120;addT(late?x5-5:x5+5,y0+(sinf>0?-12:fs+10),late?"end":"start",ang,[N0("t"),["5 %",1],N0(" ≈ "+S3(M.t5)+" s ≈ 3τ")]);}
+      addT(X1-6,Y(sinf)+(sinf>0?fs+7:-8),"end",tr,[N0("s"),["∞",1],N0(" ≈ "+S3(sinf)+"\u00a0\u00a0\u00a0\u00a0K = s"),["∞",1],N0("/E"),["0",1],N0(" ≈ "+S3(P.K))]);
+    }
+    // légende
+    var lx=X0+8,ly=14;
+    if(showIn){el("line",{x1:lx,y1:ly,x2:lx+26,y2:ly,stroke:blue,"stroke-width":2.4});var l1=el("text",{x:lx+32,y:ly+fs*0.35,"font-size":fs,"font-style":"italic"});l1.textContent="e(t)";lx+=32+fs*3.2;}
+    el("line",{x1:lx,y1:ly,x2:lx+26,y2:ly,stroke:red,"stroke-width":2.6});var l2=el("text",{x:lx+32,y:ly+fs*0.35,"font-size":fs,"font-style":"italic"});l2.textContent="s(t)";
+    gCur=el("g",{});
+    drawCursor();
+    readout(M);
+  }
+  function arrow2(xa,xb,y,col,g){var h=6;el("line",{x1:xa,y1:y,x2:xb,y2:y,stroke:col,"stroke-width":1.4},g);
+    el("path",{d:"M"+xa+","+y+"L"+(xa+h)+","+(y-3)+"L"+(xa+h)+","+(y+3)+"Z",fill:col},g);el("path",{d:"M"+xb+","+y+"L"+(xb-h)+","+(y-3)+"L"+(xb-h)+","+(y+3)+"Z",fill:col},g);}
+  function vArrow(x,ya,yb,col,g){var h=6,s=yb<ya?1:-1;el("line",{x1:x,y1:ya,x2:x,y2:yb,stroke:col,"stroke-width":1.4},g);
+    el("path",{d:"M"+x+","+yb+"L"+(x-3)+","+(yb+s*h)+"L"+(x+3)+","+(yb+s*h)+"Z",fill:col},g);el("path",{d:"M"+x+","+ya+"L"+(x-3)+","+(ya-s*h)+"L"+(x+3)+","+(ya-s*h)+"Z",fill:col},g);}
+
+  // ---- caractéristiques calculées ----
+  function measures(){
+    var K=P.K,e0=P.e0,sinf=K*e0;if(!(P.tau>0))return null;
+    return {sinf:sinf,t5:t5(),slope:sinf/P.tau};
+  }
+  function readout(M){
+    document.getElementById("coef").textContent="s∞ = K·E₀ = "+SIG(P.K*P.e0)+" ;  pente à l'origine = K·E₀/τ = "+SIG(P.tau>0?P.K*P.e0/P.tau:NaN);
+    var w=[];if(!(P.tau>0))w.push("τ doit être strictement positif.");
+    document.getElementById("warn").textContent=w.join(" ");
+    var mes=document.getElementById("mes");
+    if(!showM||!M){mes.hidden=true;return;}
+    var L=["<div><b>Valeurs calculées</b></div>","<div>s<sub>∞</sub> = K·E₀ = "+SIG(M.sinf)+"</div>","<div>τ = "+SIG(P.tau)+" s (s(τ) = 0,632·s<sub>∞</sub> = "+SIG(0.632*M.sinf)+")</div>"];
+    if(M.t5)L.push("<div>t<sub>5 %</sub> = τ·ln 20 = "+SIG(M.t5)+" s ≈ 3τ</div>");
+    mes.innerHTML=L.join("");mes.hidden=false;
+  }
+
+  // ---- lecture au pointeur ----
+  function drawCursor(){
+    if(!gCur)return;while(gCur.firstChild)gCur.removeChild(gCur.firstChild);
+    var out=document.getElementById("curs");
+    if(cursT===null||!scl){out.textContent="Pointeur : —";return;}
+    var t=cursT,s=sOut(t),x=scl.X(t),ink=cs("--ink"),red=cs("--red");
+    el("line",{x1:x,y1:Y0,x2:x,y2:Y1,stroke:ink,"stroke-width":1,opacity:.55},gCur);
+    if(isFinite(s)&&s>=scl.ymin&&s<=scl.ymax)el("circle",{cx:x,cy:scl.Y(s),r:4.2,fill:red,stroke:cs("--panel"),"stroke-width":1.5},gCur);
+    out.textContent="t = "+SIG(t)+" s ;  s(t) = "+SIG(s)+" ;  e(t) = "+SIG(P.e0);
+  }
+  function moveCur(e){var r=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal,x=vb.x+(e.clientX-r.left)*vb.width/r.width;
+    if(x<X0||x>X1){cursT=null;}else{cursT=(x-X0)/(X1-X0)*scl.T;}drawCursor();}
+  svg.addEventListener("pointermove",moveCur);svg.addEventListener("pointerdown",moveCur);
+  svg.addEventListener("pointerleave",function(e){if(e.pointerType==="mouse"){cursT=null;drawCursor();}});
+
+  // ---- curseurs et champs numériques ----
+  function sliderVal(d){var v=P[d.id];return d.log?Math.log(Math.max(v,1e-30))/Math.LN10:v;}
+  function fromSlider(d,x){return d.log?Math.pow(10,x):x;}
+  function syncUI(skip){
+    DEFS.forEach(function(d){
+      var s=document.getElementById("p_"+d.id),n=document.getElementById("n_"+d.id);
+      if(document.activeElement!==s)s.value=sliderVal(d);
+      if(document.activeElement!==n){var v=(d.id==="T"&&auto)?Teff():P[d.id];n.value=String(parseFloat(v.toPrecision(5)));}
+      n.disabled=(d.id==="T"&&auto);s.disabled=(d.id==="T"&&auto);
+    });
+    tauCaption();
+  }
+  // légende de τ : rappel de t5 % = 3τ
+  function tauCaption(){var c=document.getElementById("taucap");if(c)c.textContent="constante de temps (t₅ % ≈ 3 τ = "+SIG(3*P.tau)+" s)";}
+  DEFS.forEach(function(d){
+    var s=document.getElementById("p_"+d.id),n=document.getElementById("n_"+d.id);
+    s.min=d.min;s.max=d.max;s.step=d.step;
+    s.addEventListener("input",function(){var v=fromSlider(d,+s.value);if(d.id!=="e0"&&d.id!=="K")v=parseFloat(v.toPrecision(3));P[d.id]=v;syncUI();draw();});
+    n.addEventListener("input",function(){var v=parseFloat(n.value.replace(",","."));if(!isFinite(v))return;if(d.log&&!(v>0))return;P[d.id]=v;syncUI();draw();});
+    n.addEventListener("blur",function(){syncUI();});
+  });
+  document.querySelectorAll(".row button").forEach(function(b){b.addEventListener("click",function(){
+    var d=DEFS.filter(function(x){return x.id===b.dataset.k;})[0],dir=+b.dataset.d;
+    if(dir===0){P[d.id]=DEF[d.id];}
+    else if(d.log){P[d.id]=P[d.id]*Math.pow(10,dir*0.05);}
+    else{P[d.id]=Math.round((P[d.id]+dir*d.step)*1e6)/1e6;}
+    syncUI();draw();});});
+  document.getElementById("oAuto").addEventListener("change",function(e){auto=e.target.checked;syncUI();draw();});
+  document.getElementById("oIn").addEventListener("change",function(e){showIn=e.target.checked;draw();});
+  document.getElementById("oAs").addEventListener("change",function(e){showAs=e.target.checked;draw();});
+  document.getElementById("oBd").addEventListener("change",function(e){showBd=e.target.checked;draw();});
+  document.getElementById("oTg").addEventListener("change",function(e){showTg=e.target.checked;draw();});
+  document.getElementById("oM").addEventListener("change",function(e){showM=e.target.checked;draw();});
+  document.getElementById("rinit").addEventListener("click",function(){P={e0:DEF.e0,K:DEF.K,tau:DEF.tau,T:DEF.T};syncUI();draw();});
+  document.getElementById("rtd").addEventListener("click",function(){if(!unlocked)return;P={e0:TD.e0,K:TD.K,tau:TD.tau,T:TD.T};syncUI();draw();});
+
+  // toutes les options (mesures, valeurs du TD) sont disponibles d'office
+  var unlocked=true;
+
+  // ---- thème, polices, taille de l'affichage ----
+  if(window.matchMedia)window.matchMedia("(prefers-color-scheme: dark)").addEventListener&&window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+  var KEY="premierordre-zoom", Z=1, manual=null;
+  try{var sv=parseFloat(localStorage.getItem(KEY));if(sv>0)manual=sv;}catch(e){}
+  function autoZoom(){
+    var touch=window.matchMedia("(hover:none) and (pointer:coarse)").matches, w=window.innerWidth, h=window.innerHeight;
+    if(!touch||h<w)return 1;
+    var ref=Math.min(screen.width||w,screen.height||w);
+    if(w>ref*1.25)return Math.min(3,w/ref);
+    if(w>420&&w<=600)return w/412;
+    return 1;
+  }
+  function applyZoom(){
+    Z=manual!==null?manual:autoZoom(); Z=Math.max(0.8,Math.min(3,Z));
+    document.documentElement.style.setProperty("--z",Z.toFixed(2));
+    LS=Math.min(1.6,1+(Z-1)*0.35);
+    document.getElementById("info").textContent="Affichage ×"+Z.toFixed(2).replace(".",",")+(manual===null?" (auto)":"")+" · page "+window.innerWidth+" px, écran "+(screen.width||"?")+" px, densité "+(window.devicePixelRatio||1);
+    draw();
+  }
+  function setManual(v){manual=v;try{if(v===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,v);}catch(e){}applyZoom();}
+  document.getElementById("zp").addEventListener("click",function(){setManual(Math.min(3,Math.round((Z+0.15)*100)/100));});
+  document.getElementById("zm").addEventListener("click",function(){setManual(Math.max(0.8,Math.round((Z-0.15)*100)/100));});
+  document.getElementById("za").addEventListener("click",function(){setManual(null);});
+  window.addEventListener("resize",function(){if(manual===null)applyZoom();});
+
+  // plein écran (API native si disponible, sinon figure plaquée sur toute la fenêtre)
+  (function(){var fg=document.querySelector(".fig"),fb=document.getElementById("fsb");
+    function isFs(){return fg.classList.contains("fs");}
+    function setFs(on){fg.classList.toggle("fs",on);fb.textContent=on?"Quitter":"Plein écran";document.body.style.overflow=on?"hidden":"";}
+    fb.addEventListener("click",function(){
+      if(isFs()){if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}setFs(false);return;}
+      var rq=fg.requestFullscreen||fg.webkitRequestFullscreen;setFs(true);
+      if(rq){try{var r=rq.call(fg);if(r&&r.catch)r.catch(function(){});}catch(e){}}});
+    function onChange(){if(!document.fullscreenElement&&!document.webkitFullscreenElement&&isFs()&&fg.dataset.api==="1"){fg.dataset.api="";setFs(false);}else if(document.fullscreenElement||document.webkitFullscreenElement){fg.dataset.api="1";}}
+    document.addEventListener("fullscreenchange",onChange);document.addEventListener("webkitfullscreenchange",onChange);
+    document.addEventListener("keydown",function(e){if(e.key==="Escape"&&isFs()&&!document.fullscreenElement&&!document.webkitFullscreenElement)setFs(false);});
+  })();
+  syncUI();applyZoom();
+})();
+</script>
+</body></html>
