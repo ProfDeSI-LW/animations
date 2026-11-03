@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimations de masse</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: une seule colonne « paillasse » — réglages en haut, graduation commune, graphique, chiffres clés */
+:root {
+  --bg: #f3f6f8;
+  --panel: #ffffff;
+  --fg: #17232c;
+  --muted: #5b6b76;
+  --rule: #d5dee4;
+  --ink: #1f5fa8;      /* propositions */
+  --mean: #d0661b;     /* moyenne */
+  --real: #1d8a5a;     /* valeur réelle */
+  --above: #1f5fa8;
+  --below: #7a4fb0;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10171c; --panel: #172128; --fg: #e4ecf1; --muted: #93a4b0; --rule: #2b3943;
+    --ink: #6aa8ee; --mean: #f08d45; --real: #4cc58d; --above: #6aa8ee; --below: #b48ae8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10171c; --panel: #172128; --fg: #e4ecf1; --muted: #93a4b0; --rule: #2b3943;
+  --ink: #6aa8ee; --mean: #f08d45; --real: #4cc58d; --above: #6aa8ee; --below: #b48ae8;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 4px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 0; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: end; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: var(--panel); }
+.seg button {
+  font: 700 0.95rem var(--f-body); border: 0; background: transparent; color: var(--muted);
+  padding: 8px 16px; border-radius: 999px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+.real-input { display: flex; align-items: center; gap: 6px; }
+input[type="number"], input[type="text"], select {
+  font: 600 1.05rem var(--f-mono); padding: 7px 10px; border: 1.5px solid var(--rule); border-radius: 8px;
+  background: var(--panel); color: var(--fg); width: 7.5em;
+}
+#real { border-color: var(--real); }
+#unit { width: 4.5em; }
+select { width: auto; font-family: var(--f-body); font-size: 0.95rem; }
+.btn { font: 700 0.85rem var(--f-body); border: 1px solid var(--rule); background: var(--panel); color: var(--muted); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.9rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 18px; height: 0; border-top: 3px solid; display: inline-block; }
+.sw.dot { width: 11px; height: 11px; border: 0; border-radius: 50%; background: var(--ink); }
+
+.chart { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 8px 6px; overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 520px; height: auto; font-family: var(--f-body); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.stat { background: var(--panel); padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+.stat .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+.stat .v { font: 600 1.35rem var(--f-mono); font-variant-numeric: tabular-nums; }
+.stat .n { font-size: 0.85rem; color: var(--muted); }
+.stat.mean .v { color: var(--mean); }
+.stat.real .v { color: var(--real); }
+
+details { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; }
+summary { cursor: pointer; font-weight: 700; }
+textarea { width: 100%; min-height: 220px; margin-top: 10px; font: 0.95rem/1.5 var(--f-mono); padding: 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--fg); }
+.hint { color: var(--muted); font-size: 0.88rem; margin: 6px 0 0; }
+.err { color: var(--mean); }
+@media (prefers-reduced-motion: no-preference) { .mark { transition: cx .35s, cy .35s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Estimations de masse</h1>
+    <p class="sub" id="sub">20 propositions d'élèves, placées sur une même graduation autour de la moyenne de la classe.</p>
+  </header>
+
+  <div class="controls">
+    <div class="field">
+      <label>Affichage</label>
+      <div class="seg" role="group" aria-label="Affichage">
+        <button type="button" id="v-names" aria-pressed="true">Avec les noms</button>
+        <button type="button" id="v-anon" aria-pressed="false">Sans les noms</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="real">Masse mesurée</label>
+      <div class="real-input">
+        <input type="number" id="real" step="0.1" min="0" placeholder="à mesurer">
+        <button type="button" class="btn" id="clear-real">Effacer</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="unit">Unité</label>
+      <input type="text" id="unit" value="kg" maxlength="6">
+    </div>
+    <div class="field" id="sort-field">
+      <label for="sort">Trier par</label>
+      <select id="sort">
+        <option value="value">Proposition croissante</option>
+        <option value="name">Prénom (A→Z)</option>
+        <option value="close" id="opt-close">Proximité avec la masse mesurée</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i class="sw dot"></i>Proposition</span>
+    <span><i class="sw" style="border-color:var(--mean)"></i>Moyenne</span>
+    <span id="lg-real"><i class="sw" style="border-color:var(--real);border-top-style:dashed"></i>Masse mesurée</span>
+  </div>
+
+  <div class="chart"><svg id="svg" role="img" aria-label="Graphique des propositions"></svg></div>
+
+  <div class="stats" id="stats"></div>
+
+  <details>
+    <summary>Modifier la liste des élèves</summary>
+    <textarea id="data" spellcheck="false" aria-label="Liste des élèves : un prénom et une valeur par ligne"></textarea>
+    <p class="hint" id="data-hint">Une ligne par élève : prénom, valeur. Les virgules ou points décimaux sont acceptés (27,8 ou 27.8).</p>
+  </details>
+</div>
+
+<script>
+const DEFAULT = `Dalanda, 15
+Emile, 22.5
+Karl, 57
+Tylian, 70
+Souleman, 40
+Papa M, 26
+Wassim, 16
+Nassim, 40
+Vann, 27
+Matteo, 54
+Bryan, 19
+mohamed, 31.5
+Yacine, 35
+Ibrahim, 46
+Yoeni, 57
+Maria, 44
+Mathis, 36
+Faiza, 50
+Sarah, 27.8
+Elias, 37`;
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const state = { view: store.get("view") || "names", sort: store.get("sort") || "value", list: [] };
+
+function parse(text) {
+  const out = [];
+  for (const line of text.split(/\n/)) {
+    const t = line.trim(); if (!t) continue;
+    const m = t.match(/^(.*?)[\s,;:\t]+(-?\d+(?:[.,]\d+)?)\s*$/);
+    if (!m) continue;
+    const name = m[1].replace(/[,;:]+$/, "").trim();
+    out.push({ name: name ? name.charAt(0).toUpperCase() + name.slice(1) : "?", v: parseFloat(m[2].replace(",", ".")) });
+  }
+  return out;
+}
+
+const fmt = (x, d = 1) => {
+  const r = Math.round(x * 10 ** d) / 10 ** d;
+  return r.toLocaleString("fr-FR", { maximumFractionDigits: d });
+};
+const unit = () => ($("unit").value.trim() || "");
+const U = () => unit() ? " " + unit() : "";
+
+function realValue() {
+  const raw = $("real").value.trim().replace(",", ".");
+  if (raw === "") return null;
+  const v = parseFloat(raw);
+  return isFinite(v) ? v : null;
+}
+
+function niceStep(span) {
+  const raw = span / 8, p = 10 ** Math.floor(Math.log10(raw)), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p;
+}
+
+function render() {
+  const L = state.list, n = L.length;
+  const svg = $("svg");
+  const real = realValue();
+  $("lg-real").hidden = real === null;
+  $("opt-close").disabled = real === null;
+  if (real === null && state.sort === "close") state.sort = "value";
+  $("sort").value = state.sort;
+  $("sort-field").hidden = state.view !== "names";
+  $("v-names").setAttribute("aria-pressed", state.view === "names");
+  $("v-anon").setAttribute("aria-pressed", state.view === "anon");
+
+  if (!n) { svg.innerHTML = ""; $("stats").innerHTML = ""; return; }
+
+  const vals = L.map(d => d.v);
+  const mean = vals.reduce((a, b) => a + b, 0) / n;
+  const sorted = [...vals].sort((a, b) => a - b);
+  const q = p => { const i = (n - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); };
+  const median = q(0.5);
+  const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+
+  $("sub").textContent = `${n} propositions d'élèves, placées sur une même graduation autour de la moyenne de la classe.`;
+
+  // axis domain
+  let lo = Math.min(...vals, real ?? Infinity), hi = Math.max(...vals, real ?? -Infinity);
+  const step = niceStep(Math.max(hi - lo, 1));
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  if (lo === hi) hi = lo + step;
+
+  const W = 940;
+  const left = state.view === "names" ? 120 : 30, right = W - 70;
+  const x = v => left + (v - lo) / (hi - lo) * (right - left);
+  const css = n => `var(--${n})`;
+  let s = "";
+
+  let top = 44, H, bodyBottom;
+
+  if (state.view === "names") {
+    const rows = [...L];
+    if (state.sort === "value") rows.sort((a, b) => a.v - b.v);
+    else if (state.sort === "name") rows.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    else rows.sort((a, b) => Math.abs(a.v - real) - Math.abs(b.v - real));
+    const rh = 28;
+    bodyBottom = top + rows.length * rh + 6;
+    H = bodyBottom + 40;
+    s += gridAndAxis();
+    rows.forEach((d, i) => {
+      const y = top + i * rh + rh / 2;
+      const col = d.v >= mean ? css("above") : css("below");
+      if (i % 2 === 0) s += `<rect x="${left - 112}" y="${y - rh / 2}" width="${right - left + 172}" height="${rh}" fill="var(--bg)" opacity=".55"/>`;
+      s += `<text x="${left - 14}" y="${y + 5}" text-anchor="end" font-size="15" font-weight="700" fill="var(--fg)">${esc(d.name)}</text>`;
+      s += `<line x1="${x(mean)}" x2="${x(d.v)}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="3" stroke-linecap="round" opacity=".45"/>`;
+      s += `<circle class="mark" cx="${x(d.v)}" cy="${y}" r="7" fill="${col}"><title>${esc(d.name)} : ${fmt(d.v)}${U()}</title></circle>`;
+      const lab = real !== null && state.sort === "close" ? `${fmt(d.v)}  (${d.v - real >= 0 ? "+" : "−"}${fmt(Math.abs(d.v - real))})` : fmt(d.v);
+      const onRight = d.v >= mean || x(d.v) - left < 20 + lab.length * 8;
+      s += `<text x="${x(d.v) + (onRight ? 13 : -13)}" y="${y + 5}" text-anchor="${onRight ? "start" : "end"}" font-size="13" font-family="var(--f-mono)" fill="var(--muted)">${lab}</text>`;
+    });
+  } else {
+    // dot plot : points empilés par valeur arrondie
+    const bin = step / 5;
+    const stacks = {};
+    const pts = sorted.map(v => { const k = Math.round(v / bin); stacks[k] = (stacks[k] || 0) + 1; return { v, k, lvl: stacks[k] - 1 }; });
+    const maxLvl = Math.max(...Object.values(stacks));
+    const r = 9, gap = 2 * r + 3;
+    const baseY = top + 36 + Math.max(maxLvl, 4) * gap;
+    bodyBottom = baseY + 70;
+    H = bodyBottom + 40;
+    s += gridAndAxis();
+    pts.forEach(p => {
+      const cx = x(p.k * bin), cy = baseY - r - p.lvl * gap;
+      const col = p.v >= mean ? css("above") : css("below");
+      s += `<circle class="mark" cx="${cx}" cy="${cy}" r="${r}" fill="${col}" opacity=".9"><title>${fmt(p.v)}${U()}</title></circle>`;
+    });
+    s += `<line x1="${left}" x2="${right}" y1="${baseY + 2}" y2="${baseY + 2}" stroke="var(--fg)" stroke-width="1.5"/>`;
+    // boîte à moustaches
+    const by = baseY + 38, q1 = q(.25), q3 = q(.75);
+    s += `<line x1="${x(sorted[0])}" x2="${x(sorted[n - 1])}" y1="${by}" y2="${by}" stroke="var(--muted)" stroke-width="1.5"/>`;
+    [sorted[0], sorted[n - 1]].forEach(v => s += `<line x1="${x(v)}" x2="${x(v)}" y1="${by - 7}" y2="${by + 7}" stroke="var(--muted)" stroke-width="1.5"/>`);
+    s += `<rect x="${x(q1)}" y="${by - 12}" width="${x(q3) - x(q1)}" height="24" fill="var(--panel)" stroke="var(--muted)" stroke-width="1.5" rx="3"/>`;
+    s += `<line x1="${x(median)}" x2="${x(median)}" y1="${by - 12}" y2="${by + 12}" stroke="var(--fg)" stroke-width="2.5"/>`;
+    s += `<text x="${right + 8}" y="${by + 4}" font-size="11" fill="var(--muted)">la moitié</text><text x="${right + 8}" y="${by + 17}" font-size="11" fill="var(--muted)">des élèves</text>`;
+    s += `<text x="${x(median)}" y="${by + 28}" text-anchor="middle" font-size="11" fill="var(--muted)">médiane ${fmt(median)}</text>`;
+  }
+
+  // lignes moyenne / réelle (par-dessus)
+  s += refLine(mean, "mean", `moyenne ${fmt(mean)}${U()}`, false);
+  if (real !== null) s += refLine(real, "real", `mesurée ${fmt(real)}${U()}`, true);
+
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = s;
+
+  function gridAndAxis() {
+    let g = "";
+    for (let t = lo; t <= hi + 1e-9; t += step) {
+      g += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 6}" y2="${bodyBottom}" stroke="var(--rule)" stroke-width="1"/>`;
+      g += `<text x="${x(t)}" y="${bodyBottom + 20}" text-anchor="middle" font-size="13" font-family="var(--f-mono)" fill="var(--muted)">${fmt(t)}</text>`;
+    }
+    g += `<text x="${right + 32}" y="${bodyBottom + 20}" text-anchor="middle" font-size="12" fill="var(--muted)">${esc(unit())}</text>`;
+    return g;
+  }
+  function refLine(v, tok, label, dashed) {
+    const X = x(v), ly = dashed ? 34 : 16;
+    const anchor = X > W - 160 ? "end" : X < 160 ? "start" : "middle";
+    return `<line x1="${X}" x2="${X}" y1="${ly + 6}" y2="${bodyBottom}" stroke="var(--${tok})" stroke-width="2.5" ${dashed ? 'stroke-dasharray="7 5"' : ""}/>` +
+      `<text x="${X}" y="${ly}" text-anchor="${anchor}" font-size="14" font-weight="700" fill="var(--${tok})">${esc(label)}</text>`;
+  }
+
+  // chiffres clés
+  const st = [];
+  st.push(["mean", "Moyenne", `${fmt(mean, 2)}${U()}`, `somme ÷ ${n}`]);
+  st.push(["", "Médiane", `${fmt(median, 2)}${U()}`, "autant au-dessus qu'en dessous"]);
+  st.push(["", "Étendue", `${fmt(sorted[0])} → ${fmt(sorted[n - 1])}`, `écart de ${fmt(sorted[n - 1] - sorted[0])}${U()}`]);
+  st.push(["", "Écart-type", `${fmt(sd, 1)}${U()}`, "dispersion autour de la moyenne"]);
+  const nAbove = vals.filter(v => v > mean).length;
+  st.push(["", "Au-dessus / en dessous", `${nAbove} / ${n - nAbove}`, "par rapport à la moyenne"]);
+  if (real !== null) {
+    const errMean = mean - real;
+    const errs = L.map(d => ({ ...d, e: Math.abs(d.v - real) }));
+    const best = Math.min(...errs.map(d => d.e));
+    const winners = errs.filter(d => d.e === best);
+    const within = real !== 0 ? vals.filter(v => Math.abs(v - real) <= Math.abs(real) * 0.1).length : 0;
+    const avgErr = errs.reduce((a, d) => a + d.e, 0) / n;
+    st.push(["real", "Masse mesurée", `${fmt(real, 2)}${U()}`, ""]);
+    st.push(["", "Erreur de la moyenne", `${errMean >= 0 ? "+" : "−"}${fmt(Math.abs(errMean), 1)}${U()}`,
+      real ? `soit ${fmt(Math.abs(errMean) / Math.abs(real) * 100, 0)} % ${errMean >= 0 ? "trop haut" : "trop bas"}` : ""]);
+    st.push(["", "Erreur moyenne d'un élève", `${fmt(avgErr, 1)}${U()}`, avgErr > Math.abs(errMean) ? "plus grande que celle de la moyenne" : "plus petite que celle de la moyenne"]);
+    st.push(["", "À ±10 % près", `${within} / ${n}`, "élèves proches de la vraie valeur"]);
+    st.push(["", "Le plus proche", winners.map(d => d.name).join(", "), state.view === "names" ? `écart de ${fmt(best)}${U()}` : `écart de ${fmt(best)}${U()}`]);
+  }
+  $("stats").innerHTML = st.map(([c, k, v, nt]) =>
+    `<div class="stat ${c}"><span class="k">${k}</span><span class="v">${esc(v)}</span>${nt ? `<span class="n">${nt}</span>` : ""}</div>`).join("");
+  // sans noms : on masque le nom du plus proche
+  if (state.view === "anon" && real !== null) {
+    const last = $("stats").lastElementChild.querySelector(".v");
+    last.textContent = "—"; last.parentElement.querySelector(".k").textContent = "Le plus proche";
+  }
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+// init
+$("data").value = store.get("data") || DEFAULT;
+$("real").value = store.get("real") || "";
+$("unit").value = store.get("unit-kg") ?? "kg";
+state.list = parse($("data").value);
+
+$("v-names").onclick = () => { state.view = "names"; store.set("view", "names"); render(); };
+$("v-anon").onclick = () => { state.view = "anon"; store.set("view", "anon"); render(); };
+$("real").addEventListener("input", () => { store.set("real", $("real").value); render(); });
+$("clear-real").onclick = () => { $("real").value = ""; store.set("real", ""); render(); };
+$("unit").addEventListener("input", () => { store.set("unit-kg", $("unit").value); render(); });
+$("sort").addEventListener("change", e => { state.sort = e.target.value; store.set("sort", state.sort); render(); });
+$("data").addEventListener("input", () => {
+  state.list = parse($("data").value);
+  store.set("data", $("data").value);
+  $("data-hint").innerHTML = state.list.length
+    ? `${state.list.length} élèves reconnus. Une ligne par élève : prénom, valeur.`
+    : `<span class="err">Aucune ligne reconnue. Écrivez par exemple « Maria, 44 ».</span>`;
+  render();
+});
+render();
+</script>
+
+</html>
