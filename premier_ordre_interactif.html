@@ -248,13 +248,13 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
         parts.forEach(function(p){var at={};if(p[1]){at["font-size"]=fs*0.72;if(!low)at.dy=fs*0.3;low=true;}else if(low){at.dy=-fs*0.3;low=false;}
           var sp=el("tspan",at,t);sp.textContent=p[0];});};
       var sup=function(x){return [x,true];},N0=function(x){return [x,false];};
-      var y63=Y(0.632*sinf);
+      var y63=Y(0.63*sinf);
       // point à 63 % de s∞ : abscisse t = τ
       el("line",{x1:X0,y1:y63,x2:X(P.tau),y2:y63,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
       el("line",{x1:X(P.tau),y1:y0,x2:X(P.tau),y2:y63,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
       if(P.tau<T){el("circle",{cx:X(P.tau),cy:y63,r:4.2,fill:ang,stroke:cs("--panel"),"stroke-width":1.5},g);
         var late1=X(P.tau)>X1-90;addT(late1?X(P.tau)-6:X(P.tau)+6,y0+(sinf>0?-8:fs+6),late1?"end":"start",ang,[N0("τ ≈ "+S3(P.tau)+" s")]);}
-      addT(X0+6,y63+(sinf>0?-6:fs+4),"start",ang,[N0("0,632·s"),["∞",1],N0(" ≈ "+S3(0.632*sinf))]);
+      addT(X0+6,y63+(sinf>0?-6:fs+4),"start",ang,[N0("0,63·s"),["∞",1],N0(" ≈ "+S3(0.63*sinf))]);
       if(M.t5&&M.t5<T){var x5=X(M.t5),yTop=Y(Math.max(sinf*1.05,sinf*0.95));
         el("line",{x1:x5,y1:y0,x2:x5,y2:yTop,stroke:ang,"stroke-width":1.3,"stroke-dasharray":dash},g);
         var late=x5>X1-120;addT(late?x5-5:x5+5,y0+(sinf>0?-12:fs+10),late?"end":"start",ang,[N0("t"),["5 %",1],N0(" ≈ "+S3(M.t5)+" s ≈ 3τ")]);}
@@ -284,7 +284,7 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
     document.getElementById("warn").textContent=w.join(" ");
     var mes=document.getElementById("mes");
     if(!showM||!M){mes.hidden=true;return;}
-    var L=["<div><b>Valeurs calculées</b></div>","<div>s<sub>∞</sub> = K·E₀ = "+SIG(M.sinf)+"</div>","<div>τ = "+SIG(P.tau)+" s (s(τ) = 0,632·s<sub>∞</sub> = "+SIG(0.632*M.sinf)+")</div>"];
+    var L=["<div><b>Valeurs calculées</b></div>","<div>s<sub>∞</sub> = K·E₀ = "+SIG(M.sinf)+"</div>","<div>τ = "+SIG(P.tau)+" s (s(τ) = 0,63·s<sub>∞</sub> = "+SIG(0.63*M.sinf)+")</div>"];
     if(M.t5)L.push("<div>t<sub>5 %</sub> = τ·ln 20 = "+SIG(M.t5)+" s ≈ 3τ</div>");
     mes.innerHTML=L.join("");mes.hidden=false;
   }
