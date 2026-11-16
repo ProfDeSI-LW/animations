@@ -88,7 +88,7 @@
     </div>
     <table id="tableau"></table>
     <div id="envoi" class="meta center"></div>
-    <details id="erreurs"><summary>Voir mes erreurs</summary><div id="listeErreurs"></div></details>
+    <details id="erreurs"><summary>Revoir mes erreurs et proposer la bonne réponse</summary><div id="listeErreurs"></div></details>
     <p class="center"><button class="primary" id="rejouer">Rejouer</button></p>
     <p class="center discret"><button id="changer" title="Corriger le nom">erreur de nom ?</button></p>
   </section>
@@ -250,21 +250,21 @@ const GROUPES=[
   {nom:'f',  valeurs:[['sin','sin'],['cos','cos']],           aff:v=>v[0]},
   {nom:'a',  valeurs:[['α','alpha'],['β','beta'],['γ','gamma']],aff:v=>v[0]},
 ];
-function construireChoix(){
-  const zone=$('choix'); zone.innerHTML='';
+function construireChoix(zone,prefixe,onchange){
+  zone.innerHTML='';
   for(const g of GROUPES){
     const col=document.createElement('div'); col.className='col';
-    const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="g_${g.nom}" value="" checked><span class="none">—</span>`; col.appendChild(l0);
+    const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none">—</span>`; col.appendChild(l0);
     for(const [txt,val] of g.valeurs){
       const l=document.createElement('label');
-      l.innerHTML=`<input type="radio" name="g_${g.nom}" value="${val}"><span>${txt}</span>`; col.appendChild(l);
+      l.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="${val}"><span>${txt}</span>`; col.appendChild(l);
     }
     zone.appendChild(col);
   }
-  zone.addEventListener('change',majApercu);
+  if(onchange) zone.addEventListener('change',onchange);
 }
-function lireReponse(){
-  const val=n=>{const e=document.querySelector(`input[name="g_${n}"]:checked`);return e&&e.value!==''?e.value:null};
+function lireReponse(prefixe='g'){
+  const val=n=>{const e=document.querySelector(`input[name="${prefixe}_${n}"]:checked`);return e&&e.value!==''?e.value:null};
   const s=val('s'), k=val('k');
   return {s:s===null?1:Number(s), v:val('v'), k:k===null?null:Number(k), f:val('f'), a:val('a')};
 }
@@ -310,7 +310,22 @@ function terminer(){
   $('tableau').innerHTML=h;
   const fautesListe=resultats.map((x,n)=>({x,n})).filter(e=>!e.x.ok);
   $('erreurs').classList.toggle('hidden',fautesListe.length===0);
-  $('listeErreurs').innerHTML=fautesListe.map(({x,n})=>`<div class="err"><b>Q${n+1}</b> : ${sub(x.q.p,x.q.i)} ∧ ${sub(x.q.q,x.q.j)}<br>Ta réponse : <b>${texteReponse(x.r)}</b><br>Réponse attendue : <b>${texteReponse(x.q.sol)}</b></div>`).join('');
+  const liste=$('listeErreurs'); liste.innerHTML='';
+  $('erreurs').open=false;
+  fautesListe.forEach(({x,n})=>{
+    const d=document.createElement('div'); d.className='err'; const pre='e'+n;
+    d.innerHTML=`<b>Q${n+1}</b> : ${sub(x.q.p,x.q.i)} ∧ ${sub(x.q.q,x.q.j)}<br>Ta réponse : <b>${texteReponse(x.r)==='…'?'aucune réponse':texteReponse(x.r)}</b>
+      <div class="grid" id="${pre}_zone"></div>
+      <div class="center"><span id="${pre}_apercu" class="answer"></span> <button id="${pre}_ok">Vérifier</button> <span id="${pre}_msg"></span></div>`;
+    liste.appendChild(d);
+    const maj=()=>{ $(pre+'_apercu').innerHTML=texteReponse(lireReponse(pre)); };
+    construireChoix($(pre+'_zone'),pre,()=>{ maj(); $(pre+'_msg').textContent=''; }); maj();
+    $(pre+'_ok').onclick=()=>{
+      const r=lireReponse(pre), ok=reponseValide(r)&&egal(r,x.q.P);
+      const m=$(pre+'_msg'); m.className=ok?'ok':'ko';
+      m.textContent=ok?'✓ Bonne réponse !':'✗ Ce n\'est pas la bonne réponse, essaie encore.';
+    };
+  });
   envoyer(total,fautes);
 }
 function envoyer(total,fautes){
@@ -324,7 +339,7 @@ function envoyer(total,fautes){
   essai();
 }
 
-construireChoix(); dessinerFigures();
+construireChoix($('choix'),'g',majApercu); dessinerFigures();
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); }));
 try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
