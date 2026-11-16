@@ -43,6 +43,9 @@
   .ok{color:var(--ok);font-weight:700}.ko{color:var(--ko);font-weight:700}
   .score{font-size:2rem;font-weight:700}
   .hidden{display:none}
+  .discret{margin-top:48px}
+  .discret button{background:none;border:none;padding:2px 6px;font-size:.72rem;color:var(--muted);opacity:.45;text-decoration:underline;cursor:pointer}
+  .discret button:hover{opacity:.9}
   .intro{max-width:640px;margin:0 auto;text-align:center}
   .intro p{color:var(--muted)}
   .center{text-align:center}
@@ -87,6 +90,7 @@
     <div id="envoi" class="meta center"></div>
     <details id="erreurs"><summary>Voir mes erreurs</summary><div id="listeErreurs"></div></details>
     <p class="center"><button class="primary" id="rejouer">Rejouer</button></p>
+    <p class="center discret"><button id="changer" title="Corriger le nom">erreur de nom ?</button></p>
   </section>
 </main>
 
@@ -280,7 +284,7 @@ let eleve={prenom:'',nom:''};
 const propre=t=>t.trim().replace(/\s+/g,' ');
 function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom').value).length>=2; }
 function demarrer(){
-  eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
+  if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
   try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
   questions=tirage(); courante=0; resultats=[];
@@ -323,7 +327,8 @@ function envoyer(total,fautes){
 construireChoix(); dessinerFigures();
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); }));
-try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} $('rejouer').onclick=()=>{ $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); };
+try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
+$('changer').onclick=()=>{ $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); $('prenom').focus(); };
 $('valider').onclick=valider;
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
 </script>
