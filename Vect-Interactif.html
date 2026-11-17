@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Produits vectoriels – entraînement chronométré</title>
+<title>Produits vectoriels</title>
 <style>
   :root{
     --bg:#fff; --fg:#1f2d2d; --muted:#5b6b6b; --line:#d5dcdc; --accent:#1f6f6f; --ok:#2e9e44; --ko:#c0392b; --card:#f6f9f9;
@@ -56,20 +56,21 @@
 </head>
 <body>
 <main>
-  <h1>Produits vectoriels : entraînement chronométré</h1>
+  <h1>Produits vectoriels</h1>
 
   <div id="eleve" class="meta hidden" style="text-align:right"></div>
   <div class="panel"><svg id="figures" viewBox="20 80 860 190" role="img" aria-label="Trois figures de changement de base"></svg></div>
 
   <!-- Accueil -->
   <section id="accueil" class="intro">
-    <p>Dix produits vectoriels à calculer d'après les figures. Une faute coûte 2 points sur 20 ; une bonne réponse vaut 2 points si tu réponds en 10 s, moins si tu es plus lent.</p>
+    <p>Lancer une série de dix calculs. Évaluer les produits suivants.</p>
     <form id="identite" autocomplete="off">
       <p><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
          <input type="text" id="nom" placeholder="NOM" autocomplete="family-name"></p>
       <p class="meta">Ton nom s'affichera pendant toute la partie et sera enregistré avec ta note.</p>
       <p><button class="primary" id="demarrer" type="submit" disabled>Démarrer</button></p>
     </form>
+    <div id="histAccueil" class="meta" style="margin-top:14px"></div>
   </section>
 
   <!-- Question -->
@@ -87,6 +88,7 @@
       <div class="score" id="note"></div>
       <div id="bilan" class="meta"></div>
     </div>
+    <div id="histFin" class="meta center" style="margin-top:10px"></div>
     <table id="tableau"></table>
     <div id="envoi" class="meta center"></div>
     <details id="erreurs"><summary>Revoir mes erreurs et proposer la bonne réponse</summary><div id="listeErreurs"></div></details>
@@ -98,6 +100,7 @@
 <script>
 /* ======================= Paramètres modifiables ======================= */
 const NB_QUESTIONS = 10;
+const NB_PARTIES_AVANT_HISTORIQUE = 3;   // à partir de ce nombre de parties lancées, l'élève voit ses 3 dernières notes
 const NB_PARTIES_SANS_SCALAIRE = 3; // les N premières parties d'un élève (sur ce navigateur) ne contiennent aucun produit scalaire
 const CACHER_CHRONO_PREMIERE_PARTIE = true;   // 1re partie de l'élève : chronomètre masqué (le temps compte quand même)
 const PROBA_SANS_SCALAIRE = 0.6;   // probabilité qu'une partie ne contienne aucun produit scalaire
@@ -325,21 +328,43 @@ function afficherQuestion(){
 let eleve={prenom:'',nom:''};
 const propre=t=>t.trim().replace(/\s+/g,' ');
 function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom').value).length>=2; }
-// Numéro de la partie de cet élève (compté dans le navigateur, par nom ; s'incrémente à chaque départ)
-const parties={}; let partieCourante=0;
-function numeroPartie(){
-  const cle='parties:'+(eleve.nom+' '+eleve.prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
-  let n=parties[cle]||0;
-  try{ n=Math.max(n,parseInt(localStorage.getItem(cle)||'0',10)||0); }catch(e){}
-  n++; parties[cle]=n;
-  try{ localStorage.setItem(cle,String(n)); }catch(e){}
-  return n;
+// Historique des parties de l'élève, gardé dans le navigateur (par nom). Une partie est enregistrée dès son départ
+// (note = null tant qu'elle n'est pas terminée) : une série abandonnée est donc comptée et signalée « non terminée ».
+let partieCourante=0, cleCourante='', idCourant='';
+const memHist={};
+function cleHist(prenom,nom){ return 'hist:'+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function lireHist(cle){
+  let h=memHist[cle];
+  try{ const t=localStorage.getItem(cle); if(t) h=JSON.parse(t); }catch(e){}
+  return Array.isArray(h)?h:[];
+}
+function ecrireHist(cle,h){ memHist[cle]=h; try{ localStorage.setItem(cle,JSON.stringify(h)); }catch(e){} }
+function lancerPartie(){          // renvoie le numéro de cette partie pour l'élève
+  cleCourante=cleHist(eleve.prenom,eleve.nom);
+  const h=lireHist(cleCourante);
+  idCourant=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  h.push({id:idCourant,d:new Date().toISOString(),note:null});
+  ecrireHist(cleCourante,h.slice(-30));
+  return h.length;
+}
+function finirPartie(note){
+  const h=lireHist(cleCourante), e=h.find(x=>x.id===idCourant);
+  if(e){ e.note=note; ecrireHist(cleCourante,h); }
+}
+function htmlHistorique(cle){
+  const h=lireHist(cle);
+  if(h.length<NB_PARTIES_AVANT_HISTORIQUE) return '';
+  const dateCourte=iso=>new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+  return '<b>Tes trois dernières parties</b><br>'+h.slice(-3).reverse().map(e=>`${dateCourte(e.d)} — ${e.note===null?'non terminée':fmt(e.note)+' / '+(NB_QUESTIONS*POINTS_PAR_QUESTION)}`).join('<br>');
+}
+function majHistoriqueAccueil(){
+  $('histAccueil').innerHTML=nomValide()?htmlHistorique(cleHist(propre($('prenom').value),propre($('nom').value))):'';
 }
 function demarrer(){
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
   try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
-  partieCourante=numeroPartie();
+  partieCourante=lancerPartie();
   questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE); courante=0; resultats=[];
   $('accueil').classList.add('hidden'); $('fin').classList.add('hidden'); $('jeu').classList.remove('hidden'); $('envoi').textContent='';
   afficherQuestion();
@@ -356,7 +381,9 @@ function terminer(){
   clearInterval(horloge);
   $('jeu').classList.add('hidden'); $('fin').classList.remove('hidden');
   const total=resultats.reduce((s,x)=>s+x.pts,0), fautes=resultats.filter(x=>!x.ok).length;
+  finirPartie(Math.round(total*100)/100);
   $('note').textContent=`${fmt(total)} / ${NB_QUESTIONS*POINTS_PAR_QUESTION}`;
+  $('histFin').innerHTML=htmlHistorique(cleCourante);
   $('bilan').textContent=fautes===0?'Aucune erreur !':`${fautes} erreur${fautes>1?'s':''} sur ${NB_QUESTIONS} questions.`;
   let h='<tr><th>Question</th><th>énoncé</th><th></th><th>temps (s)</th><th>note</th></tr>';
   resultats.forEach((x,n)=>{ h+=`<tr><td>Q${n+1}</td><td>${enonceQ(x.q).replace(' = ?','')}</td><td class="${x.ok?'ok':'ko'}">${x.ok?'✓':'✗'}</td><td>${fmt(x.t)}</td><td>${fmt(x.pts)}</td></tr>`; });
@@ -394,9 +421,9 @@ function envoyer(total,fautes){
 
 construireChoix($('choix'),'g',majApercu); dessinerFigures();
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
-['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); }));
-try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
-$('changer').onclick=()=>{ $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); $('prenom').focus(); };
+['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); majHistoriqueAccueil(); }));
+try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
+$('changer').onclick=()=>{ $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
 $('valider').onclick=valider;
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
 </script>
