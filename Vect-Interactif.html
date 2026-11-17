@@ -76,7 +76,6 @@
   <section id="jeu" class="hidden">
     <div class="row meta"><span id="num"></span><span id="chrono"></span></div>
     <div class="q center" id="enonce"></div>
-    <div class="meta center" id="consigne" style="min-height:1.4em"></div>
     <div class="grid" id="choix"></div>
     <div class="answer" id="apercu"></div>
     <div class="center"><button class="primary" id="valider">Valider</button></div>
@@ -99,6 +98,8 @@
 <script>
 /* ======================= Paramètres modifiables ======================= */
 const NB_QUESTIONS = 10;
+const NB_PARTIES_SANS_SCALAIRE = 3; // les N premières parties d'un élève (sur ce navigateur) ne contiennent aucun produit scalaire
+const CACHER_CHRONO_PREMIERE_PARTIE = true;   // 1re partie de l'élève : chronomètre masqué (le temps compte quand même)
 const PROBA_SANS_SCALAIRE = 0.6;   // probabilité qu'une partie ne contienne aucun produit scalaire
 const MAX_ZEROS    = 2;            // au plus 2 questions dont la réponse est le vecteur nul
 const POINTS_PAR_QUESTION = 2;     // 10 questions -> 20 points
@@ -200,9 +201,9 @@ function prendre(source,nombre,maxZeros){
   return sortie;
 }
 // Dans une partie sur trois environ, 1 ou 2 questions portent sur un produit SCALAIRE (pour garder l'attention)
-function tirage(){
+function tirage(avecScalaire=true){
   const r=Math.random();
-  const nScal = r<PROBA_SANS_SCALAIRE ? 0 : (Math.random()<0.7 ? 1 : 2);
+  const nScal = (!avecScalaire || r<PROBA_SANS_SCALAIRE) ? 0 : (Math.random()<0.7 ? 1 : 2);
   return melanger([...prendre(banqueScal,nScal,1), ...prendre(banque,NB_QUESTIONS-nScal,MAX_ZEROS)]);
 }
 
@@ -314,20 +315,32 @@ function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach
 function afficherQuestion(){
   const q=questions[courante];
   $('num').textContent=`Question ${courante+1} / ${NB_QUESTIONS}`;
-  $('enonce').innerHTML=enonceQ(q); $('consigne').textContent=q.scal?'Produit scalaire : le résultat est un nombre. « + » ou « − » seul = ±1 ; « 0 » = nul ; ni vecteur ni indice.':'';
+  $('enonce').innerHTML=enonceQ(q);
   razChoix(); debut=performance.now();
   clearInterval(horloge);
   horloge=setInterval(()=>{ $('chrono').textContent=((performance.now()-debut)/1000).toFixed(0)+' s'; },250);
   $('chrono').textContent='0 s';
+  $('chrono').style.visibility=(partieCourante===1&&CACHER_CHRONO_PREMIERE_PARTIE)?'hidden':'visible';   // le temps est quand même mesuré et compté dans la note
 }
 let eleve={prenom:'',nom:''};
 const propre=t=>t.trim().replace(/\s+/g,' ');
 function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom').value).length>=2; }
+// Numéro de la partie de cet élève (compté dans le navigateur, par nom ; s'incrémente à chaque départ)
+const parties={}; let partieCourante=0;
+function numeroPartie(){
+  const cle='parties:'+(eleve.nom+' '+eleve.prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  let n=parties[cle]||0;
+  try{ n=Math.max(n,parseInt(localStorage.getItem(cle)||'0',10)||0); }catch(e){}
+  n++; parties[cle]=n;
+  try{ localStorage.setItem(cle,String(n)); }catch(e){}
+  return n;
+}
 function demarrer(){
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
   try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
-  questions=tirage(); courante=0; resultats=[];
+  partieCourante=numeroPartie();
+  questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE); courante=0; resultats=[];
   $('accueil').classList.add('hidden'); $('fin').classList.add('hidden'); $('jeu').classList.remove('hidden'); $('envoi').textContent='';
   afficherQuestion();
 }
@@ -354,7 +367,7 @@ function terminer(){
   $('erreurs').open=false;
   fautesListe.forEach(({x,n})=>{
     const d=document.createElement('div'); d.className='err'; const pre='e'+n;
-    d.innerHTML=`<b>Q${n+1}</b> : ${enonceQ(x.q).replace(' = ?','')}<br>${x.q.scal?'<span class="meta">(produit scalaire : résultat = nombre)</span><br>':''}Ta réponse : <b>${texteReponse(x.r,x.q.scal)==='…'?'aucune réponse':texteReponse(x.r,x.q.scal)}</b>
+    d.innerHTML=`<b>Q${n+1}</b> : ${enonceQ(x.q).replace(' = ?','')}<br>Ta réponse : <b>${texteReponse(x.r,x.q.scal)==='…'?'aucune réponse':texteReponse(x.r,x.q.scal)}</b>
       <div class="grid" id="${pre}_zone"></div>
       <div class="center"><span id="${pre}_apercu" class="answer"></span> <button id="${pre}_ok">Vérifier</button> <span id="${pre}_msg"></span></div>`;
     liste.appendChild(d);
