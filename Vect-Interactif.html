@@ -76,6 +76,7 @@
   <section id="jeu" class="hidden">
     <div class="row meta"><span id="num"></span><span id="chrono"></span></div>
     <div class="q center" id="enonce"></div>
+    <div class="meta center" id="consigne" style="min-height:1.4em"></div>
     <div class="grid" id="choix"></div>
     <div class="answer" id="apercu"></div>
     <div class="center"><button class="primary" id="valider">Valider</button></div>
@@ -98,6 +99,7 @@
 <script>
 /* ======================= Paramètres modifiables ======================= */
 const NB_QUESTIONS = 10;
+const PROBA_SANS_SCALAIRE = 0.6;   // probabilité qu'une partie ne contienne aucun produit scalaire
 const MAX_ZEROS    = 2;            // au plus 2 questions dont la réponse est le vecteur nul
 const POINTS_PAR_QUESTION = 2;     // 10 questions -> 20 points
 // Valeur d'une BONNE réponse selon le temps de réponse t (en s) : 2 points jusqu'à 10 s, puis 2·√(10/t)
@@ -143,8 +145,21 @@ function vecteurReponse(r,t){
   return BASES_TEST[t][r.k][r.v].map(x=>c*x);
 }
 const proche=(u,v)=>u.every((x,i)=>Math.abs(x-v[i])<1e-9);
-const egal=(r,P)=>[0,1].every(t=>proche(vecteurReponse(r,t),P[t]));
-function reponseValide(r){          // la réponse est-elle complète et cohérente ?
+// valeur d'une réponse à un produit SCALAIRE (nombre) : 0, ±1, ±sin/cos(angle)
+function valeurScalaire(r,t){
+  if(r.v==='0') return 0;
+  let c=r.s;
+  if(r.f){ const th=ANGLES_TEST[t][ANG[r.a]]; c*= r.f==='sin'?Math.sin(th):Math.cos(th); }
+  return c;
+}
+const egal=(r,q)=>[0,1].every(t=> q.scal ? Math.abs(valeurScalaire(r,t)-q.P[t])<1e-9 : proche(vecteurReponse(r,t),q.P[t]));
+function reponseValide(r,scal){     // la réponse est-elle complète et cohérente ?
+  if(scal){                          // nombre : « 0 » seul, ou signe (± 1) , ou ± sin/cos angle ; ni vecteur ni indice
+    if(r.v==='0') return !r.k&&!r.f&&!r.a;
+    if(r.v||r.k) return false;
+    if(r.f||r.a) return !!(r.f&&r.a);
+    return !!r.sx;
+  }
   if(!r.v) return false;
   if(r.v==='0') return true;
   if(!r.k) return false;
@@ -160,29 +175,51 @@ for(const k of [1,2,3,4]) for(const v of LETTRES) for(const s of [1,-1]){
   candidats.push({s,v,k,f:null,a:null});
   for(const f of ['sin','cos']) for(const a of ['alpha','beta','gamma']) candidats.push({s,v,k,f,a});
 }
-const banque=[];
+const dot=(u,v)=>u[0]*v[0]+u[1]*v[1]+u[2]*v[2];
+const candidatsScal=[{s:1,v:'0',k:null,f:null,a:null,sx:true},{s:1,v:null,k:null,f:null,a:null,sx:true},{s:-1,v:null,k:null,f:null,a:null,sx:true}];
+for(const s of [1,-1]) for(const f of ['sin','cos']) for(const a of ['alpha','beta','gamma']) candidatsScal.push({s,v:null,k:null,f,a,sx:true});
+const banque=[], banqueScal=[];
 for(const i of [1,2,3,4]) for(const p of LETTRES) for(const j of [1,2,3,4]) for(const q of LETTRES){
   if(i===j&&p===q) continue;
   const P=BASES_TEST.map(B=>cross(B[i][p],B[j][q]));
-  const sol=candidats.find(c=>egal(c,P));
-  if(sol) banque.push({i,p,j,q,P,sol,zero:sol.v==='0'});
+  const sol=candidats.find(c=>egal(c,{P}));
+  if(sol) banque.push({i,p,j,q,P,sol,zero:sol.v==='0',scal:false});
+  const Ps=BASES_TEST.map(B=>dot(B[i][p],B[j][q]));
+  const solS=candidatsScal.find(c=>egal(c,{scal:true,P:Ps}));
+  if(solS) banqueScal.push({i,p,j,q,P:Ps,sol:solS,zero:solS.v==='0',scal:true});
 }
 
-function tirage(){
-  for(;;){
-    const copie=banque.slice();
-    for(let n=copie.length-1;n>0;n--){const m=Math.floor(Math.random()*(n+1));[copie[n],copie[m]]=[copie[m],copie[n]];}
-    const choix=[]; let zeros=0;
-    for(const q of copie){
-      if(q.zero){ if(zeros>=MAX_ZEROS) continue; zeros++; }
-      choix.push(q); if(choix.length===NB_QUESTIONS) return choix;
-    }
+function melanger(t){ const c=t.slice(); for(let n=c.length-1;n>0;n--){const m=Math.floor(Math.random()*(n+1));[c[n],c[m]]=[c[m],c[n]];} return c; }
+function prendre(source,nombre,maxZeros){
+  const sortie=[]; let zeros=0;
+  for(const q of melanger(source)){
+    if(sortie.length===nombre) break;
+    if(q.zero){ if(zeros>=maxZeros) continue; zeros++; }
+    sortie.push(q);
   }
+  return sortie;
+}
+// Dans une partie sur trois environ, 1 ou 2 questions portent sur un produit SCALAIRE (pour garder l'attention)
+function tirage(){
+  const r=Math.random();
+  const nScal = r<PROBA_SANS_SCALAIRE ? 0 : (Math.random()<0.7 ? 1 : 2);
+  return melanger([...prendre(banqueScal,nScal,1), ...prendre(banque,NB_QUESTIONS-nScal,MAX_ZEROS)]);
 }
 
 /* ======================= Affichage ======================= */
 const sub=(l,k)=>`${l}<sub>${k}</sub>`;
-function texteReponse(r){
+function texteReponse(r,scal){
+  if(scal){
+    if(!reponseValide(r,true)){
+      const m=[];
+      if(r.sx) m.push(r.s<0?'−':'+');
+      if(r.v) m.push(r.v==='0'?'0':(r.k?sub(r.v,r.k):r.v+'<sub>?</sub>'));
+      if(r.f||r.a) m.push((r.f||'?')+' '+(r.a?ANG_SYM[r.a]:'?'));
+      return m.join(' ')||'…';
+    }
+    if(r.v==='0') return '0';
+    return (r.s<0?'− ':'+ ')+(r.f?`${r.f} ${ANG_SYM[r.a]}`:'1');
+  }
   if(!reponseValide(r)){
     const morceaux=[];
     if(r.s<0) morceaux.push('−');
@@ -193,6 +230,8 @@ function texteReponse(r){
   if(r.v==='0') return '0';
   return (r.s<0?'− ':'+ ')+(r.f?`${r.f} ${ANG_SYM[r.a]} `:'')+sub(r.v,r.k);
 }
+const operateur=q=>q.scal?'·':'∧';
+const enonceQ=q=>`${sub(q.p,q.i)} ${operateur(q)} ${sub(q.q,q.j)} = ?`;
 
 /* ---- Figures ---- */
 const NS='http://www.w3.org/2000/svg';
@@ -267,15 +306,15 @@ function construireChoix(zone,prefixe,onchange){
 function lireReponse(prefixe='g'){
   const val=n=>{const e=document.querySelector(`input[name="${prefixe}_${n}"]:checked`);return e&&e.value!==''?e.value:null};
   const s=val('s'), k=val('k');
-  return {s:s===null?1:Number(s), v:val('v'), k:k===null?null:Number(k), f:val('f'), a:val('a')};
+  return {s:s===null?1:Number(s), sx:s!==null, v:val('v'), k:k===null?null:Number(k), f:val('f'), a:val('a')};
 }
-function majApercu(){ $('apercu').innerHTML=texteReponse(lireReponse()); }
+function majApercu(){ const q=questions[courante]; $('apercu').innerHTML=texteReponse(lireReponse(),q&&q.scal); }
 function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach(e=>e.checked=true); majApercu(); }
 
 function afficherQuestion(){
   const q=questions[courante];
   $('num').textContent=`Question ${courante+1} / ${NB_QUESTIONS}`;
-  $('enonce').innerHTML=`${sub(q.p,q.i)} ∧ ${sub(q.q,q.j)} = ?`;
+  $('enonce').innerHTML=enonceQ(q); $('consigne').textContent=q.scal?'Produit scalaire : le résultat est un nombre. « + » ou « − » seul = ±1 ; « 0 » = nul ; ni vecteur ni indice.':'';
   razChoix(); debut=performance.now();
   clearInterval(horloge);
   horloge=setInterval(()=>{ $('chrono').textContent=((performance.now()-debut)/1000).toFixed(0)+' s'; },250);
@@ -294,7 +333,7 @@ function demarrer(){
 }
 function valider(){
   const t=(performance.now()-debut)/1000, r=lireReponse(), q=questions[courante];
-  const ok=reponseValide(r)&&egal(r,q.P);
+  const ok=reponseValide(r,q.scal)&&egal(r,q);
   resultats.push({q,r,ok,t,pts:ok?pointsPour(t):0});
   courante++;
   if(courante<NB_QUESTIONS) afficherQuestion(); else terminer();
@@ -315,14 +354,14 @@ function terminer(){
   $('erreurs').open=false;
   fautesListe.forEach(({x,n})=>{
     const d=document.createElement('div'); d.className='err'; const pre='e'+n;
-    d.innerHTML=`<b>Q${n+1}</b> : ${sub(x.q.p,x.q.i)} ∧ ${sub(x.q.q,x.q.j)}<br>Ta réponse : <b>${texteReponse(x.r)==='…'?'aucune réponse':texteReponse(x.r)}</b>
+    d.innerHTML=`<b>Q${n+1}</b> : ${enonceQ(x.q).replace(' = ?','')}<br>${x.q.scal?'<span class="meta">(produit scalaire : résultat = nombre)</span><br>':''}Ta réponse : <b>${texteReponse(x.r,x.q.scal)==='…'?'aucune réponse':texteReponse(x.r,x.q.scal)}</b>
       <div class="grid" id="${pre}_zone"></div>
       <div class="center"><span id="${pre}_apercu" class="answer"></span> <button id="${pre}_ok">Vérifier</button> <span id="${pre}_msg"></span></div>`;
     liste.appendChild(d);
-    const maj=()=>{ $(pre+'_apercu').innerHTML=texteReponse(lireReponse(pre)); };
+    const maj=()=>{ $(pre+'_apercu').innerHTML=texteReponse(lireReponse(pre),x.q.scal); };
     construireChoix($(pre+'_zone'),pre,()=>{ maj(); $(pre+'_msg').textContent=''; }); maj();
     $(pre+'_ok').onclick=()=>{
-      const r=lireReponse(pre), ok=reponseValide(r)&&egal(r,x.q.P);
+      const r=lireReponse(pre), ok=reponseValide(r,x.q.scal)&&egal(r,x.q);
       const m=$(pre+'_msg'); m.className=ok?'ok':'ko';
       m.textContent=ok?'✓ Bonne réponse !':'✗ Ce n\'est pas la bonne réponse, essaie encore.';
     };
@@ -332,7 +371,7 @@ function terminer(){
 function envoyer(total,fautes){
   if(!URL_ENVOI){ $('envoi').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; return; }
   const charge={prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,fautes,date:new Date().toISOString(),
-    detail:resultats.map((x,n)=>`Q${n+1} ${x.q.p}${x.q.i}^${x.q.q}${x.q.j} : ${x.ok?'OK':'faux'} ${Math.round(x.t*10)/10} s -> ${x.pts}`)};
+    detail:resultats.map((x,n)=>`Q${n+1} ${x.q.p}${x.q.i}${x.q.scal?'.':'^'}${x.q.q}${x.q.j} : ${x.ok?'OK':'faux'} ${Math.round(x.t*10)/10} s -> ${x.pts}`)};
   $('envoi').textContent='Envoi de ta note…';
   const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
     .then(()=>{$('envoi').textContent=`Note envoyée pour ${eleve.prenom} ${eleve.nom}.`;})
