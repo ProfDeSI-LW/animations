@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Produits vectoriels</title>
+<style>
+  :root{
+    --bg:#fff; --fg:#1f2d2d; --muted:#5b6b6b; --line:#d5dcdc; --accent:#1f6f6f; --ok:#2e9e44; --ko:#c0392b; --card:#f6f9f9;
+    --b1:#111; --b2:#1a3fe0; --b3:#e0301a; --b4:#2a8a2a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#14191a; --fg:#e4ecec; --muted:#9db0b0; --line:#2e3a3b; --accent:#5ec4c4; --ok:#5fd277; --ko:#ff7a6b; --card:#1b2223;
+      --b1:#eee; --b2:#7d9bff; --b3:#ff7a66; --b4:#6fd36f; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  main{max-width:980px;margin:0 auto;padding:16px}
+  h1{font-size:1.25rem;margin:.2rem 0 .8rem}
+  .panel{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin:8px 0}
+  svg{width:100%;height:auto;display:block}
+  svg text{font-family:"Latin Modern Math","STIX Two Math","Times New Roman",serif;font-size:19px;font-style:italic}
+  svg .idx{font-size:13px;font-style:normal}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .q{font-size:1.5rem;margin:.6rem 0}
+  .q sub{font-size:.65em}
+  .vec{position:relative;display:inline-block;padding-top:.28em;line-height:1}
+  .vec::before{content:"";position:absolute;left:.05em;right:0;top:.1em;border-top:1.4px solid currentColor}
+  .vec::after{content:"";position:absolute;right:-.12em;top:.1em;margin-top:-3.4px;border-left:6px solid currentColor;border-top:3.4px solid transparent;border-bottom:3.4px solid transparent}
+  .meta{color:var(--muted);font-size:.95rem}
+  .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px 8px;max-width:520px;margin:12px auto}
+  .col{display:flex;flex-direction:column;gap:6px}
+  .col label{display:flex;align-items:center;gap:5px;cursor:pointer;min-height:36px;padding:2px 4px;border-radius:8px;white-space:nowrap}
+  .col label:hover{background:var(--card)}
+  .col input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+  .col .none{color:var(--muted);font-size:.8rem}
+  .answer{text-align:center;font-size:1.35rem;min-height:2.2rem;margin:.2rem 0 .6rem}
+  .answer sub{font-size:.65em}
+  button{font:inherit;padding:8px 20px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button:disabled{opacity:.5;cursor:default}
+  input[type=text]{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:min(100%,260px)}
+  table{border-collapse:collapse;width:100%;margin:10px 0}
+  th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:center}
+  th:first-child,td:first-child{text-align:left}
+  .ok{color:var(--ok);font-weight:700}.ko{color:var(--ko);font-weight:700}
+  .score{font-size:2rem;font-weight:700}
+  .hidden{display:none}
+  .discret{margin-top:48px}
+  .discret button{background:none;border:none;padding:2px 6px;font-size:.72rem;color:var(--muted);opacity:.45;text-decoration:underline;cursor:pointer}
+  .discret button:hover{opacity:.9}
+  .intro{max-width:640px;margin:0 auto;text-align:center}
+  .intro p{color:var(--muted)}
+  .center{text-align:center}
+  details{margin:10px 0}
+  .err{background:var(--card);border-radius:10px;padding:8px 12px;margin:8px 0}
+  @media (max-width:480px){ svg text{font-size:36px} svg .idx{font-size:24px} main{padding:10px} .grid{gap:2px 2px} .col label{gap:3px;padding:2px 1px;font-size:.95rem} .col input{width:18px;height:18px} .q{font-size:1.3rem} }
+</style>
+</head>
+<body>
+<main>
+  <h1>Produits vectoriels</h1>
+
+  <div id="eleve" class="meta hidden" style="text-align:right"></div>
+  <div class="panel"><svg id="figures" viewBox="20 80 860 190" role="img" aria-label="Trois figures de changement de base"></svg></div>
+
+  <!-- Accueil -->
+  <section id="accueil" class="intro">
+    <p>Lancer une série de dix calculs. Évaluer les produits suivants.</p>
+    <form id="identite" autocomplete="off">
+      <p><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
+         <input type="text" id="nom" placeholder="NOM" autocomplete="family-name"></p>
+      <p class="meta">Ton nom s'affichera pendant toute la partie et sera enregistré avec ta note.</p>
+      <p><button class="primary" id="demarrer" type="submit" disabled>Démarrer</button></p>
+    </form>
+    <div id="histAccueil" class="meta" style="margin-top:14px"></div>
+  </section>
+
+  <!-- Question -->
+  <section id="jeu" class="hidden">
+    <div class="row meta"><span id="num"></span><span id="chrono"></span></div>
+    <div class="q center" id="enonce"></div>
+    <div class="grid" id="choix"></div>
+    <div class="answer" id="apercu"></div>
+    <div class="center"><button class="primary" id="valider">Valider</button></div>
+  </section>
+
+  <!-- Résultat -->
+  <section id="fin" class="hidden">
+    <div class="center">
+      <div class="score" id="note"></div>
+      <div id="bilan" class="meta"></div>
+    </div>
+    <div id="histFin" class="meta center" style="margin-top:10px"></div>
+    <table id="tableau"></table>
+    <div id="envoi" class="meta center"></div>
+    <details id="erreurs"><summary>Revoir mes erreurs et proposer la bonne réponse</summary><div id="listeErreurs"></div></details>
+    <p class="center"><button class="primary" id="rejouer">Rejouer</button></p>
+    <p class="center discret"><button id="changer" title="Corriger le nom">erreur de nom ?</button></p>
+  </section>
+</main>
+
+<script>
+/* ======================= Paramètres modifiables ======================= */
+const NB_QUESTIONS = 10;
+const NB_PARTIES_AVANT_HISTORIQUE = 3;   // à partir de ce nombre de parties lancées, l'élève voit ses 3 dernières notes
+const NB_PARTIES_SANS_SCALAIRE = 3; // les N premières parties d'un élève (sur ce navigateur) ne contiennent aucun produit scalaire
+const CACHER_CHRONO_PREMIERE_PARTIE = true;   // 1re partie de l'élève : chronomètre masqué (le temps compte quand même)
+const PROBA_SANS_SCALAIRE = 0.6;   // probabilité qu'une partie ne contienne aucun produit scalaire
+const MAX_ZEROS    = 2;            // au plus 2 questions dont la réponse est le vecteur nul
+const POINTS_PAR_QUESTION = 2;     // 10 questions -> 20 points
+// Valeur d'une BONNE réponse selon le temps de réponse t (en s) : 2 points jusqu'à 10 s, puis 2·√(10/t)
+// arrondi vers le bas au quart de point, avec un plancher de 0,75.
+// Cohérent avec tes captures : 9→2 ; 10→2 ; 11→1,75 ; 13→1,75 ; 15→1,5 ; 20→1,25 ; ≥40→0,75.
+// (pour changer de règle, modifier seulement cette fonction)
+const PLANCHER = 0.75;
+function pointsPour(t){
+  if(t<=10) return POINTS_PAR_QUESTION;
+  const f=POINTS_PAR_QUESTION*Math.sqrt(10/t);
+  const palier=Math.ceil(f*4-1e-9)/4-0.25;       // quart de point strictement inférieur (ou égal)
+  return Math.max(PLANCHER,Math.min(POINTS_PAR_QUESTION,palier));
+}
+// Envoi facultatif de la note (voir README) : mettre l'URL du script Google Apps Script
+const URL_ENVOI = "https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec";             // (laisser vide pour tester sans enregistrement)
+const ANGLE_DESSIN = 25;           // angle (°) utilisé sur les figures
+
+/* ======================= Géométrie : les 4 bases ======================= */
+// Coordonnées de chaque base dans B1, pour des angles (a, b, c) = (alpha, beta, gamma)
+function bases(a,b,c){
+  const ca=Math.cos(a), sa=Math.sin(a), cb=Math.cos(b), sb=Math.sin(b), cc=Math.cos(c), sc=Math.sin(c);
+  const mul=(M,v)=>[0,1,2].map(i=>M[i][0]*v[0]+M[i][1]*v[1]+M[i][2]*v[2]);
+  // B2 dans B1 : rotation alpha autour de z (z1=z2)
+  const B2={x:[ca,sa,0], y:[-sa,ca,0], z:[0,0,1]};
+  // B3 dans B2 : rotation beta autour de y (y2=y3) ; z3 = cb z2 + sb x2 ; x3 = -sb z2 + cb x2
+  const M2=[[B2.x[0],B2.y[0],B2.z[0]],[B2.x[1],B2.y[1],B2.z[1]],[B2.x[2],B2.y[2],B2.z[2]]]; // colonnes = x2,y2,z2
+  const B3={x:mul(M2,[cb,0,-sb]), y:mul(M2,[0,1,0]), z:mul(M2,[sb,0,cb])};
+  // B4 dans B3 : rotation gamma autour de x (x3=x4) ; y4 = cc y3 + sc z3 ; z4 = -sc y3 + cc z3
+  const M3=[[B3.x[0],B3.y[0],B3.z[0]],[B3.x[1],B3.y[1],B3.z[1]],[B3.x[2],B3.y[2],B3.z[2]]];
+  const B4={x:mul(M3,[1,0,0]), y:mul(M3,[0,cc,sc]), z:mul(M3,[0,-sc,cc])};
+  return {1:{x:[1,0,0],y:[0,1,0],z:[0,0,1]},2:B2,3:B3,4:B4};
+}
+const cross=(u,v)=>[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
+const ANGLES_TEST=[[0.37,0.71,1.13],[0.93,0.52,0.28]];   // deux jeux d'angles « génériques » pour tester l'égalité formelle
+const BASES_TEST=ANGLES_TEST.map(t=>bases(...t));
+const ANG={alpha:0,beta:1,gamma:2}, ANG_SYM={alpha:'α',beta:'β',gamma:'γ'};
+
+// vecteur d'une réponse {s:+1|-1, v:'x'|'y'|'z'|'0', k:1..4, f:'sin'|'cos'|null, a:'alpha'|...|null} pour le jeu de test t
+function vecteurReponse(r,t){
+  if(r.v==='0') return [0,0,0];
+  let c=r.s;
+  if(r.f){ const th=ANGLES_TEST[t][ANG[r.a]]; c*= r.f==='sin'?Math.sin(th):Math.cos(th); }
+  return BASES_TEST[t][r.k][r.v].map(x=>c*x);
+}
+const proche=(u,v)=>u.every((x,i)=>Math.abs(x-v[i])<1e-9);
+// valeur d'une réponse à un produit SCALAIRE (nombre) : 0, ±1, ±sin/cos(angle)
+function valeurScalaire(r,t){
+  if(r.v==='0') return 0;
+  let c=r.s;
+  if(r.f){ const th=ANGLES_TEST[t][ANG[r.a]]; c*= r.f==='sin'?Math.sin(th):Math.cos(th); }
+  return c;
+}
+const egal=(r,q)=>[0,1].every(t=> q.scal ? Math.abs(valeurScalaire(r,t)-q.P[t])<1e-9 : proche(vecteurReponse(r,t),q.P[t]));
+function reponseValide(r,scal){     // la réponse est-elle complète et cohérente ?
+  if(scal){                          // nombre : « 0 » seul, ou signe (± 1) , ou ± sin/cos angle ; ni vecteur ni indice
+    if(r.v==='0') return !r.k&&!r.f&&!r.a;
+    if(r.v||r.k) return false;
+    if(r.f||r.a) return !!(r.f&&r.a);
+    return !!r.sx;
+  }
+  if(!r.v) return false;
+  if(r.v==='0') return true;
+  if(!r.k) return false;
+  if((r.f&&!r.a)||(!r.f&&r.a)) return false;
+  return true;
+}
+
+/* ======================= Banque de questions ======================= */
+const LETTRES=['x','y','z'];
+const candidats=[];                 // toutes les réponses « à une seule cellule » possibles
+candidats.push({s:1,v:'0',k:null,f:null,a:null});
+for(const k of [1,2,3,4]) for(const v of LETTRES) for(const s of [1,-1]){
+  candidats.push({s,v,k,f:null,a:null});
+  for(const f of ['sin','cos']) for(const a of ['alpha','beta','gamma']) candidats.push({s,v,k,f,a});
+}
+const dot=(u,v)=>u[0]*v[0]+u[1]*v[1]+u[2]*v[2];
+const candidatsScal=[{s:1,v:'0',k:null,f:null,a:null,sx:true},{s:1,v:null,k:null,f:null,a:null,sx:true},{s:-1,v:null,k:null,f:null,a:null,sx:true}];
+for(const s of [1,-1]) for(const f of ['sin','cos']) for(const a of ['alpha','beta','gamma']) candidatsScal.push({s,v:null,k:null,f,a,sx:true});
+const banque=[], banqueScal=[];
+for(const i of [1,2,3,4]) for(const p of LETTRES) for(const j of [1,2,3,4]) for(const q of LETTRES){
+  if(i===j&&p===q) continue;
+  const P=BASES_TEST.map(B=>cross(B[i][p],B[j][q]));
+  const sol=candidats.find(c=>egal(c,{P}));
+  if(sol) banque.push({i,p,j,q,P,sol,zero:sol.v==='0',scal:false});
+  const Ps=BASES_TEST.map(B=>dot(B[i][p],B[j][q]));
+  const solS=candidatsScal.find(c=>egal(c,{scal:true,P:Ps}));
+  if(solS) banqueScal.push({i,p,j,q,P:Ps,sol:solS,zero:solS.v==='0',scal:true});
+}
+
+function melanger(t){ const c=t.slice(); for(let n=c.length-1;n>0;n--){const m=Math.floor(Math.random()*(n+1));[c[n],c[m]]=[c[m],c[n]];} return c; }
+function prendre(source,nombre,maxZeros){
+  const sortie=[]; let zeros=0;
+  for(const q of melanger(source)){
+    if(sortie.length===nombre) break;
+    if(q.zero){ if(zeros>=maxZeros) continue; zeros++; }
+    sortie.push(q);
+  }
+  return sortie;
+}
+// Dans une partie sur trois environ, 1 ou 2 questions portent sur un produit SCALAIRE (pour garder l'attention)
+function tirage(avecScalaire=true){
+  const r=Math.random();
+  const nScal = (!avecScalaire || r<PROBA_SANS_SCALAIRE) ? 0 : (Math.random()<0.7 ? 1 : 2);
+  return melanger([...prendre(banqueScal,nScal,1), ...prendre(banque,NB_QUESTIONS-nScal,MAX_ZEROS)]);
+}
+
+/* ======================= Affichage ======================= */
+const sub=(l,k)=>`${l}<sub>${k}</sub>`;
+// vecteur : la flèche recouvre l'expression complète, indice compris (x₁ → flèche sur « x₁ » entier)
+const vect=(l,k)=>`<span class="vec">${l}<sub>${k}</sub></span>`;
+function texteReponse(r,scal){
+  if(scal){
+    if(!reponseValide(r,true)){
+      const m=[];
+      if(r.sx) m.push(r.s<0?'−':'+');
+      if(r.v) m.push(r.v==='0'?'0':(r.k?vect(r.v,r.k):vect(r.v,'?')));
+      if(r.f||r.a) m.push((r.f||'?')+' '+(r.a?ANG_SYM[r.a]:'?'));
+      return m.join(' ')||'…';
+    }
+    if(r.v==='0') return '0';
+    return (r.s<0?'− ':'+ ')+(r.f?`${r.f} ${ANG_SYM[r.a]}`:'1');
+  }
+  if(!reponseValide(r)){
+    const morceaux=[];
+    if(r.s<0) morceaux.push('−');
+    if(r.v) morceaux.push(r.v==='0'?'0':(r.k?vect(r.v,r.k):vect(r.v,'?')));
+    if(r.f||r.a) morceaux.push((r.f||'?')+' '+(r.a?ANG_SYM[r.a]:'?'));
+    return morceaux.join(' ')||'…';
+  }
+  if(r.v==='0') return '0';
+  return (r.s<0?'− ':'+ ')+(r.f?`${r.f} ${ANG_SYM[r.a]} `:'')+vect(r.v,r.k);
+}
+const operateur=q=>q.scal?'·':'∧';
+const enonceQ=q=>`${vect(q.p,q.i)} ${operateur(q)} ${vect(q.q,q.j)} = ?`;
+
+/* ---- Figures ---- */
+const NS='http://www.w3.org/2000/svg';
+function svgEl(nom,attrs,parent){const e=document.createElementNS(NS,nom);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+function etiquette(g,x,y,lettre,k,col,ancre='middle'){
+  const t=svgEl('text',{x,y,fill:col,'text-anchor':ancre},g);
+  t.appendChild(document.createTextNode(lettre));
+  const s=svgEl('tspan',{class:'idx',dy:5},t); s.textContent=k;
+}
+// pointe de flèche : sommet en (xe,ye), orientée selon le vecteur unitaire (ux,uy), de longueur h
+function tete(g,xe,ye,ux,uy,col,h){
+  svgEl('polygon',{points:`${xe},${ye} ${xe-ux*h-uy*h*0.35},${ye-uy*h+ux*h*0.35} ${xe-ux*h+uy*h*0.35},${ye-uy*h-ux*h*0.35}`,fill:col},g);
+}
+function fleche(g,x0,y0,dx,dy,col,pointille){
+  const L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L,h=9;
+  const xe=x0+dx,ye=y0+dy;
+  svgEl('line',{x1:x0,y1:y0,x2:xe-ux*h*0.6,y2:ye-uy*h*0.6,stroke:col,'stroke-width':1.6,...(pointille?{'stroke-dasharray':'5 3'}:{})},g);
+  tete(g,xe,ye,ux,uy,col,h);
+}
+function figure(svg,cx,cy,A,B,angle,axe,sym,couls){
+  // A=[droite,haut] lettres de la base de départ ; B=[droite,haut] de la base tournée ; axe={lettre, k1, k2}
+  const [kA,lA,cA]=A,[kB,lB,cB]=B, L=100, th=ANGLE_DESSIN*Math.PI/180;
+  const g=svgEl('g',{},svg);
+  // base de départ
+  fleche(g,cx,cy,L,0,cA); etiquette(g,cx+L+16,cy+6,lA[0],kA[0],cA);
+  fleche(g,cx,cy,0,-L,cA); etiquette(g,cx-2,cy-L-8,lA[1],kA[1],cA);
+  // base tournée
+  const ex=[Math.cos(th),-Math.sin(th)], ey=[-Math.sin(th),-Math.cos(th)];
+  fleche(g,cx,cy,L*ex[0],L*ex[1],cB,true); etiquette(g,cx+L*ex[0]+16,cy+L*ex[1]-4,lB[0],kB[0],cB);
+  fleche(g,cx,cy,L*ey[0],L*ey[1],cB,true); etiquette(g,cx+L*ey[0]-4,cy+L*ey[1]-8,lB[1],kB[1],cB);
+  // angle
+  const r=50, h=8;
+  const delta=h*0.8/r;                                   // l'arc s'arrête un peu avant la pointe (rad)
+  const thm=th-delta;                                    // fin du trait de l'arc
+  svgEl('path',{d:`M ${cx+r} ${cy} A ${r} ${r} 0 0 0 ${cx+r*Math.cos(thm)} ${cy-r*Math.sin(thm)}`,fill:'none',stroke:'var(--fg)','stroke-width':1.4},g);
+  // pointe orientée selon la tangente de l'arc (sens trigonométrique, vers le haut à l'écran), sommet sur l'arc à l'angle theta
+  const tg=th-delta/2;
+  tete(g,cx+r*Math.cos(th),cy-r*Math.sin(th),-Math.sin(tg),-Math.cos(tg),'var(--fg)',h);
+  const th2=th/2;
+  const t=svgEl('text',{x:cx+(r+14)*Math.cos(th2),y:cy-(r+14)*Math.sin(th2)+6,fill:'var(--fg)','font-style':'normal','text-anchor':'middle'},g); t.textContent=sym;
+  // axe de rotation : vecteur sortant (cercle + point), noté à gauche en bas
+  svgEl('circle',{cx,cy,r:9,fill:'none',stroke:cA,'stroke-width':1.6},g);
+  svgEl('circle',{cx,cy,r:2.5,fill:cA},g);
+  const nt=svgEl('text',{x:cx-L*0.75,y:cy+30,fill:cA},g);
+  nt.appendChild(document.createTextNode(axe.l)); let s=svgEl('tspan',{class:'idx',dy:5},nt); s.textContent=axe.k1;
+  let u=svgEl('tspan',{dy:-5,fill:cB},nt); u.appendChild(document.createTextNode(axe.l)); let w=svgEl('tspan',{class:'idx',dy:5},u); w.textContent=axe.k2;
+}
+function dessinerFigures(){
+  const svg=document.getElementById('figures'); svg.innerHTML='';
+  const c=n=>`var(--b${n})`;
+  // Figure 1 : rotation alpha autour de z (B1 -> B2) ; Figure 2 : beta autour de y (B2 -> B3) ; Figure 3 : gamma autour de x (B3 -> B4)
+  figure(svg,160,215,[['1','1'],'xy',c(1)],[['2','2'],'xy',c(2)],0,{l:'z',k1:'1',k2:'2'},'α');
+  figure(svg,450,215,[['2','2'],'zx',c(2)],[['3','3'],'zx',c(3)],0,{l:'y',k1:'2',k2:'3'},'β');
+  figure(svg,740,215,[['3','3'],'yz',c(3)],[['4','4'],'yz',c(4)],0,{l:'x',k1:'3',k2:'4'},'γ');
+}
+
+/* ======================= Déroulement ======================= */
+const $=id=>document.getElementById(id);
+let questions=[], courante=0, debut=0, horloge=null, resultats=[];
+const GROUPES=[
+  {nom:'s',  valeurs:[['+',1],['−',-1]],                      aff:v=>v[0]},
+  {nom:'v',  valeurs:[['x','x'],['y','y'],['z','z'],['0','0']],aff:v=>v[0]},
+  {nom:'k',  valeurs:[['1',1],['2',2],['3',3],['4',4]],       aff:v=>v[0]},
+  {nom:'f',  valeurs:[['sin','sin'],['cos','cos']],           aff:v=>v[0]},
+  {nom:'a',  valeurs:[['α','alpha'],['β','beta'],['γ','gamma']],aff:v=>v[0]},
+];
+function construireChoix(zone,prefixe,onchange){
+  zone.innerHTML='';
+  for(const g of GROUPES){
+    const col=document.createElement('div'); col.className='col';
+    const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none">—</span>`; col.appendChild(l0);
+    for(const [txt,val] of g.valeurs){
+      const l=document.createElement('label');
+      l.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="${val}"><span>${txt}</span>`; col.appendChild(l);
+    }
+    zone.appendChild(col);
+  }
+  if(onchange) zone.addEventListener('change',onchange);
+}
+function lireReponse(prefixe='g'){
+  const val=n=>{const e=document.querySelector(`input[name="${prefixe}_${n}"]:checked`);return e&&e.value!==''?e.value:null};
+  const s=val('s'), k=val('k');
+  return {s:s===null?1:Number(s), sx:s!==null, v:val('v'), k:k===null?null:Number(k), f:val('f'), a:val('a')};
+}
+function majApercu(){ const q=questions[courante]; $('apercu').innerHTML=texteReponse(lireReponse(),q&&q.scal); }
+function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach(e=>e.checked=true); majApercu(); }
+
+function afficherQuestion(){
+  const q=questions[courante];
+  $('num').textContent=`Question ${courante+1} / ${NB_QUESTIONS}`;
+  $('enonce').innerHTML=enonceQ(q);
+  razChoix(); debut=performance.now();
+  clearInterval(horloge);
+  horloge=setInterval(()=>{ $('chrono').textContent=((performance.now()-debut)/1000).toFixed(0)+' s'; },250);
+  $('chrono').textContent='0 s';
+  $('chrono').style.visibility=(partieCourante===1&&CACHER_CHRONO_PREMIERE_PARTIE)?'hidden':'visible';   // le temps est quand même mesuré et compté dans la note
+}
+let eleve={prenom:'',nom:''};
+const propre=t=>t.trim().replace(/\s+/g,' ');
+function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom').value).length>=2; }
+// Historique des parties de l'élève, gardé dans le navigateur (par nom). Une partie est enregistrée dès son départ
+// (note = null tant qu'elle n'est pas terminée) : une série abandonnée est donc comptée et signalée « non terminée ».
+let partieCourante=0, cleCourante='', idCourant='';
+const memHist={};
+function cleHist(prenom,nom){ return 'hist:'+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function lireHist(cle){
+  let h=memHist[cle];
+  try{ const t=localStorage.getItem(cle); if(t) h=JSON.parse(t); }catch(e){}
+  return Array.isArray(h)?h:[];
+}
+function ecrireHist(cle,h){ memHist[cle]=h; try{ localStorage.setItem(cle,JSON.stringify(h)); }catch(e){} }
+function lancerPartie(){          // renvoie le numéro de cette partie pour l'élève
+  cleCourante=cleHist(eleve.prenom,eleve.nom);
+  const h=lireHist(cleCourante);
+  idCourant=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  h.push({id:idCourant,d:new Date().toISOString(),note:null});
+  ecrireHist(cleCourante,h.slice(-30));
+  return h.length;
+}
+function finirPartie(note){
+  const h=lireHist(cleCourante), e=h.find(x=>x.id===idCourant);
+  if(e){ e.note=note; ecrireHist(cleCourante,h); }
+}
+function htmlHistorique(cle){
+  const h=lireHist(cle);
+  if(h.length<NB_PARTIES_AVANT_HISTORIQUE) return '';
+  const dateCourte=iso=>new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+  return '<b>Tes trois dernières parties</b><br>'+h.slice(-3).reverse().map(e=>`${dateCourte(e.d)} — ${e.note===null?'non terminée':fmt(e.note)+' / '+(NB_QUESTIONS*POINTS_PAR_QUESTION)}`).join('<br>');
+}
+function majHistoriqueAccueil(){
+  $('histAccueil').innerHTML=nomValide()?htmlHistorique(cleHist(propre($('prenom').value),propre($('nom').value))):'';
+}
+function demarrer(){
+  if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
+  try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
+  $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
+  partieCourante=lancerPartie();
+  questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE); courante=0; resultats=[];
+  $('accueil').classList.add('hidden'); $('fin').classList.add('hidden'); $('jeu').classList.remove('hidden'); $('envoi').textContent='';
+  afficherQuestion();
+}
+function valider(){
+  const t=(performance.now()-debut)/1000, r=lireReponse(), q=questions[courante];
+  const ok=reponseValide(r,q.scal)&&egal(r,q);
+  resultats.push({q,r,ok,t,pts:ok?pointsPour(t):0});
+  courante++;
+  if(courante<NB_QUESTIONS) afficherQuestion(); else terminer();
+}
+const fmt=x=>String(Math.round(x*100)/100).replace('.',',');
+function terminer(){
+  clearInterval(horloge);
+  $('jeu').classList.add('hidden'); $('fin').classList.remove('hidden');
+  const total=resultats.reduce((s,x)=>s+x.pts,0), fautes=resultats.filter(x=>!x.ok).length;
+  finirPartie(Math.round(total*100)/100);
+  $('note').textContent=`${fmt(total)} / ${NB_QUESTIONS*POINTS_PAR_QUESTION}`;
+  $('histFin').innerHTML=htmlHistorique(cleCourante);
+  $('bilan').textContent=fautes===0?'Aucune erreur !':`${fautes} erreur${fautes>1?'s':''} sur ${NB_QUESTIONS} questions.`;
+  let h='<tr><th>Question</th><th>énoncé</th><th></th><th>temps (s)</th><th>note</th></tr>';
+  resultats.forEach((x,n)=>{ h+=`<tr><td>Q${n+1}</td><td>${enonceQ(x.q).replace(' = ?','')}</td><td class="${x.ok?'ok':'ko'}">${x.ok?'✓':'✗'}</td><td>${fmt(x.t)}</td><td>${fmt(x.pts)}</td></tr>`; });
+  $('tableau').innerHTML=h;
+  const fautesListe=resultats.map((x,n)=>({x,n})).filter(e=>!e.x.ok);
+  $('erreurs').classList.toggle('hidden',fautesListe.length===0);
+  const liste=$('listeErreurs'); liste.innerHTML='';
+  $('erreurs').open=false;
+  fautesListe.forEach(({x,n})=>{
+    const d=document.createElement('div'); d.className='err'; const pre='e'+n;
+    d.innerHTML=`<b>Q${n+1}</b> : ${enonceQ(x.q).replace(' = ?','')}<br>Ta réponse : <b>${texteReponse(x.r,x.q.scal)==='…'?'aucune réponse':texteReponse(x.r,x.q.scal)}</b>
+      <div class="grid" id="${pre}_zone"></div>
+      <div class="center"><span id="${pre}_apercu" class="answer"></span> <button id="${pre}_ok">Vérifier</button> <span id="${pre}_msg"></span></div>`;
+    liste.appendChild(d);
+    const maj=()=>{ $(pre+'_apercu').innerHTML=texteReponse(lireReponse(pre),x.q.scal); };
+    construireChoix($(pre+'_zone'),pre,()=>{ maj(); $(pre+'_msg').textContent=''; }); maj();
+    $(pre+'_ok').onclick=()=>{
+      const r=lireReponse(pre), ok=reponseValide(r,x.q.scal)&&egal(r,x.q);
+      const m=$(pre+'_msg'); m.className=ok?'ok':'ko';
+      m.textContent=ok?'✓ Bonne réponse !':'✗ Ce n\'est pas la bonne réponse, essaie encore.';
+    };
+  });
+  envoyer(total,fautes);
+}
+function envoyer(total,fautes){
+  if(!URL_ENVOI){ $('envoi').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; return; }
+  const charge={prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,fautes,date:new Date().toISOString(),
+    detail:resultats.map((x,n)=>`Q${n+1} ${x.q.p}${x.q.i}${x.q.scal?'.':'^'}${x.q.q}${x.q.j} : ${x.ok?'OK':'faux'} ${Math.round(x.t*10)/10} s -> ${x.pts}`)};
+  $('envoi').textContent='Envoi de ta note…';
+  const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
+    .then(()=>{$('envoi').textContent=`Note envoyée pour ${eleve.prenom} ${eleve.nom}.`;})
+    .catch(()=>{ $('envoi').innerHTML='Envoi impossible (connexion ?). <button id="reenvoi">Réessayer</button>'; $('reenvoi').onclick=essai; });
+  essai();
+}
+
+construireChoix($('choix'),'g',majApercu); dessinerFigures();
+$('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
+['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); majHistoriqueAccueil(); }));
+try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
+$('changer').onclick=()=>{ $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
+$('valider').onclick=valider;
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
+</script>
+</body>
+</html>
