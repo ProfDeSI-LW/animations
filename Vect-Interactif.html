@@ -245,11 +245,15 @@ function etiquette(g,x,y,lettre,k,col,ancre='middle'){
   t.appendChild(document.createTextNode(lettre));
   const s=svgEl('tspan',{class:'idx',dy:5},t); s.textContent=k;
 }
+// pointe de flèche : sommet en (xe,ye), orientée selon le vecteur unitaire (ux,uy), de longueur h
+function tete(g,xe,ye,ux,uy,col,h){
+  svgEl('polygon',{points:`${xe},${ye} ${xe-ux*h-uy*h*0.35},${ye-uy*h+ux*h*0.35} ${xe-ux*h+uy*h*0.35},${ye-uy*h-ux*h*0.35}`,fill:col},g);
+}
 function fleche(g,x0,y0,dx,dy,col,pointille){
   const L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L,h=9;
   const xe=x0+dx,ye=y0+dy;
   svgEl('line',{x1:x0,y1:y0,x2:xe-ux*h*0.6,y2:ye-uy*h*0.6,stroke:col,'stroke-width':1.6,...(pointille?{'stroke-dasharray':'5 3'}:{})},g);
-  svgEl('polygon',{points:`${xe},${ye} ${xe-ux*h-uy*h*0.35},${ye-uy*h+ux*h*0.35} ${xe-ux*h+uy*h*0.35},${ye-uy*h-ux*h*0.35}`,fill:col},g);
+  tete(g,xe,ye,ux,uy,col,h);
 }
 function figure(svg,cx,cy,A,B,angle,axe,sym,couls){
   // A=[droite,haut] lettres de la base de départ ; B=[droite,haut] de la base tournée ; axe={lettre, k1, k2}
@@ -263,10 +267,14 @@ function figure(svg,cx,cy,A,B,angle,axe,sym,couls){
   fleche(g,cx,cy,L*ex[0],L*ex[1],cB,true); etiquette(g,cx+L*ex[0]+16,cy+L*ex[1]-4,lB[0],kB[0],cB);
   fleche(g,cx,cy,L*ey[0],L*ey[1],cB,true); etiquette(g,cx+L*ey[0]-4,cy+L*ey[1]-8,lB[1],kB[1],cB);
   // angle
-  const r=50;
-  svgEl('path',{d:`M ${cx+r} ${cy} A ${r} ${r} 0 0 0 ${cx+r*Math.cos(th)} ${cy-r*Math.sin(th)}`,fill:'none',stroke:'var(--fg)','stroke-width':1.4},g);
+  const r=50, h=8;
+  const delta=h*0.8/r;                                   // l'arc s'arrête un peu avant la pointe (rad)
+  const thm=th-delta;                                    // fin du trait de l'arc
+  svgEl('path',{d:`M ${cx+r} ${cy} A ${r} ${r} 0 0 0 ${cx+r*Math.cos(thm)} ${cy-r*Math.sin(thm)}`,fill:'none',stroke:'var(--fg)','stroke-width':1.4},g);
+  // pointe orientée selon la tangente de l'arc (sens trigonométrique, vers le haut à l'écran), sommet sur l'arc à l'angle theta
+  const tg=th-delta/2;
+  tete(g,cx+r*Math.cos(th),cy-r*Math.sin(th),-Math.sin(tg),-Math.cos(tg),'var(--fg)',h);
   const th2=th/2;
-  svgEl('polygon',{points:`${cx+r*Math.cos(th)},${cy-r*Math.sin(th)} ${cx+r*Math.cos(th)-3},${cy-r*Math.sin(th)+9} ${cx+r*Math.cos(th)+5},${cy-r*Math.sin(th)+7}`,fill:'var(--fg)'},g);
   const t=svgEl('text',{x:cx+(r+14)*Math.cos(th2),y:cy-(r+14)*Math.sin(th2)+6,fill:'var(--fg)','font-style':'normal','text-anchor':'middle'},g); t.textContent=sym;
   // axe de rotation : vecteur sortant (cercle + point), noté à gauche en bas
   svgEl('circle',{cx,cy,r:9,fill:'none',stroke:cA,'stroke-width':1.6},g);
