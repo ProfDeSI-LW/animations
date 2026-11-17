@@ -45,6 +45,8 @@
   th:first-child,td:first-child{text-align:left}
   .ok{color:var(--ok);font-weight:700}.ko{color:var(--ko);font-weight:700}
   .score{font-size:2rem;font-weight:700}
+  /* page de correction : les figures restent visibles en haut de l'écran pendant le défilement */
+  body.revue .panel{position:sticky;top:0;z-index:10;background:var(--bg);margin-top:0;padding:6px 0;box-shadow:0 6px 8px -6px rgba(0,0,0,.25)}
   .hidden{display:none}
   .discret{margin-top:48px}
   .discret button{background:none;border:none;padding:2px 6px;font-size:.72rem;color:var(--muted);opacity:.45;text-decoration:underline;cursor:pointer}
@@ -378,6 +380,7 @@ function demarrer(){
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
   try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
+  document.body.classList.remove('revue');
   partieCourante=lancerPartie();
   questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE); courante=0; resultats=[];
   $('accueil').classList.add('hidden'); $('fin').classList.add('hidden'); $('jeu').classList.remove('hidden'); $('envoi').textContent='';
@@ -395,6 +398,7 @@ function terminer(){
   clearInterval(horloge);
   $('jeu').classList.add('hidden'); $('fin').classList.remove('hidden');
   const total=resultats.reduce((s,x)=>s+x.pts,0), fautes=resultats.filter(x=>!x.ok).length;
+  document.body.classList.add('revue');
   finirPartie(Math.round(total*100)/100);
   $('note').textContent=`${fmt(total)} / ${NB_QUESTIONS*POINTS_PAR_QUESTION}`;
   $('histFin').innerHTML=htmlHistorique(cleCourante);
@@ -437,7 +441,7 @@ construireChoix($('choix'),'g',majApercu); dessinerFigures();
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); majHistoriqueAccueil(); }));
 try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
-$('changer').onclick=()=>{ $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
+$('changer').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
 $('valider').onclick=valider;
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
 </script>
