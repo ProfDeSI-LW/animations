@@ -345,8 +345,8 @@ function terminer(){
   const total=resultats.reduce((s,x)=>s+x.pts,0), fautes=resultats.filter(x=>!x.ok).length;
   $('note').textContent=`${fmt(total)} / ${NB_QUESTIONS*POINTS_PAR_QUESTION}`;
   $('bilan').textContent=fautes===0?'Aucune erreur !':`${fautes} erreur${fautes>1?'s':''} sur ${NB_QUESTIONS} questions.`;
-  let h='<tr><th>Question</th><th></th><th>temps (s)</th><th>note</th></tr>';
-  resultats.forEach((x,n)=>{ h+=`<tr><td>Q${n+1}</td><td class="${x.ok?'ok':'ko'}">${x.ok?'✓':'✗'}</td><td>${fmt(x.t)}</td><td>${fmt(x.pts)}</td></tr>`; });
+  let h='<tr><th>Question</th><th>énoncé</th><th></th><th>temps (s)</th><th>note</th></tr>';
+  resultats.forEach((x,n)=>{ h+=`<tr><td>Q${n+1}</td><td>${enonceQ(x.q).replace(' = ?','')}</td><td class="${x.ok?'ok':'ko'}">${x.ok?'✓':'✗'}</td><td>${fmt(x.t)}</td><td>${fmt(x.pts)}</td></tr>`; });
   $('tableau').innerHTML=h;
   const fautesListe=resultats.map((x,n)=>({x,n})).filter(e=>!e.x.ok);
   $('erreurs').classList.toggle('hidden',fautesListe.length===0);
