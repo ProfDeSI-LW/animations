@@ -66,14 +66,26 @@
   <div id="eleve" class="meta hidden" style="text-align:right"></div>
   <div class="panel"><svg id="figures" viewBox="20 80 860 190" role="img" aria-label="Trois figures de changement de base"></svg></div>
 
+  <!-- Page de réglage (ouvrir la page avec ?admin) -->
+  <section id="admin" class="hidden">
+    <h2 style="font-size:1.1rem">Réglages de l'enseignant</h2>
+    <p class="meta">Choisis les réglages, puis copie le lien et donne-le à tes élèves. Les réglages sont portés par le lien lui-même : rien n'est stocké sur un serveur et rien n'est protégé (un élève curieux peut modifier son propre lien).</p>
+    <div id="adminChamps"></div>
+    <p><b>Lien à donner aux élèves</b></p>
+    <textarea id="adminLien" readonly rows="4" style="width:100%;font:12px/1.3 monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
+    <p><button class="primary" id="adminCopier">Copier le lien</button> <a id="adminOuvrir" target="_blank" rel="noopener">Ouvrir le lien (test)</a> <button id="adminRaz">Valeurs par défaut</button></p>
+    <p class="meta" id="adminMsg"></p>
+  </section>
+
   <!-- Accueil -->
   <section id="accueil" class="intro">
-    <p>Lancer une série de dix calculs. Évaluer les produits suivants.</p>
+    <p id="consigne"></p>
     <form id="identite" autocomplete="off">
       <p><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
          <input type="text" id="nom" placeholder="NOM" autocomplete="family-name"></p>
       <p class="meta">Ton nom s'affichera pendant toute la partie et sera enregistré avec ta note.</p>
-      <p><button class="primary" id="demarrer" type="submit" disabled>Démarrer</button></p>
+      <p><button class="primary" id="demarrer" type="submit" disabled>Démarrer</button>
+         <button type="button" id="essai" class="hidden" disabled>Essai : un seul calcul</button></p>
     </form>
     <div id="histAccueil" class="meta" style="margin-top:14px"></div>
   </section>
@@ -97,35 +109,65 @@
     <table id="tableau"></table>
     <div id="envoi" class="meta center"></div>
     <details id="erreurs"><summary>Revoir mes erreurs et proposer la bonne réponse</summary><div id="listeErreurs"></div></details>
-    <p class="center"><button class="primary" id="rejouer">Rejouer</button></p>
+    <p class="center"><button class="primary" id="rejouer">Rejouer</button> <button id="serie" class="hidden">Lancer une série</button></p>
     <p class="center discret"><button id="changer" title="Corriger le nom">erreur de nom ?</button></p>
   </section>
 </main>
 
 <script>
 /* ======================= Paramètres modifiables ======================= */
-const NB_QUESTIONS = 10;
-const NB_PARTIES_AVANT_HISTORIQUE = 3;   // à partir de ce nombre de parties lancées, l'élève voit ses 3 dernières notes
-const NB_PARTIES_SANS_SCALAIRE = 3; // les N premières parties d'un élève (sur ce navigateur) ne contiennent aucun produit scalaire
-const CACHER_CHRONO_PREMIERE_PARTIE = true;   // 1re partie de l'élève : chronomètre masqué (le temps compte quand même)
-const PROBA_SANS_SCALAIRE = 0.6;   // probabilité qu'une partie ne contienne aucun produit scalaire
-const MAX_ZEROS    = 2;            // au plus 2 questions dont la réponse est le vecteur nul
-const POINTS_PAR_QUESTION = 2;     // 10 questions -> 20 points
-// Valeur d'une BONNE réponse selon le temps de réponse t (en s) : 2 points jusqu'à 10 s, puis 2·√(10/t)
-// arrondi vers le bas au quart de point, avec un plancher de 0,75.
-// Cohérent avec tes captures : 9→2 ; 10→2 ; 11→1,75 ; 13→1,75 ; 15→1,5 ; 20→1,25 ; ≥40→0,75.
-// (pour changer de règle, modifier seulement cette fonction)
-const PLANCHER = 0.75;
-function pointsPour(t){
-  if(t<=10) return POINTS_PAR_QUESTION;
-  const f=POINTS_PAR_QUESTION*Math.sqrt(10/t);
-  const palier=Math.ceil(f*4-1e-9)/4-0.25;       // quart de point strictement inférieur (ou égal)
-  return Math.max(PLANCHER,Math.min(POINTS_PAR_QUESTION,palier));
+// Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
+// (page de réglage) qui fabrique un lien à donner aux élèves ; les réglages voyagent dans le lien (#cfg=…).
+const DEFAUTS = {
+  nbQuestions: 10,                 // questions par série
+  pointsParQuestion: 2,            // points d'une question réussie rapidement (10 questions -> 20 points)
+  tempsPleinePoints: 10,           // secondes pour avoir tous les points
+  plancher: 0.75,                  // points minimum d'une bonne réponse, même très lente
+  probaSansScalaire: 0.6,          // probabilité qu'une série ne contienne aucun produit scalaire
+  nbPartiesSansScalaire: 3,        // les N premières parties d'un élève (sur ce navigateur) sans produit scalaire
+  maxZeros: 2,                     // au plus N questions dont la réponse est le vecteur nul
+  cacherChronoPremierePartie: true,// 1re partie : chronomètre masqué (le temps compte quand même)
+  nbPartiesAvantHistorique: 3,     // à partir de N parties lancées, l'élève voit ses 3 dernières notes
+  essaiTest: true,                 // bouton « Essai : un seul calcul » sur l'accueil
+  consigne: '',                    // texte d'accueil ; vide = « Lancer une série de N calculs. Évaluer les produits suivants. »
+  feuille: 'Notes V2',             // onglet de la feuille Google qui reçoit les notes (doit être autorisé dans le script)
+  // Adresse du script Google Apps Script (laisser vide pour ne rien enregistrer)
+  urlEnvoi: 'https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec',
+  angleDessin: 25                  // angle (°) utilisé sur les figures
+};
+const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],plancher:[0,10],probaSansScalaire:[0,1],
+  nbPartiesSansScalaire:[0,20],maxZeros:[0,5],nbPartiesAvantHistorique:[1,20],angleDessin:[5,60]};
+const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'];
+function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<json encodé en base64>
+  try{
+    const m=location.hash.match(/cfg=([^&]+)/); if(!m) return {};
+    const o=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))));
+    const c={};
+    for(const k in o){
+      if(BORNES[k]&&typeof o[k]==='number'&&isFinite(o[k])) c[k]=Math.min(BORNES[k][1],Math.max(BORNES[k][0],o[k]));
+      else if(CLES_BOOL.includes(k)&&typeof o[k]==='boolean') c[k]=o[k];
+      else if(CLES_TEXTE.includes(k)&&typeof o[k]==='string'){
+        if(k==='urlEnvoi'&&o[k]&&!o[k].startsWith('https://script.google.com/')) continue;   // seules les adresses Google Apps Script sont acceptées
+        c[k]=o[k].slice(0,300);
+      }
+    }
+    return c;
+  }catch(e){ return {}; }
 }
-// Envoi facultatif de la note (voir README) : mettre l'URL du script Google Apps Script
-const FEUILLE_RESULTATS = "Notes V2";   // onglet de la feuille Google qui reçoit les notes de cette version (doit être autorisé dans le script)
-const URL_ENVOI = "https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec";             // (laisser vide pour tester sans enregistrement)
-const ANGLE_DESSIN = 25;           // angle (°) utilisé sur les figures
+const CFG=Object.assign({},DEFAUTS,lireConfigUrl());
+const NB_QUESTIONS=CFG.nbQuestions, POINTS_PAR_QUESTION=CFG.pointsParQuestion, NB_PARTIES_AVANT_HISTORIQUE=CFG.nbPartiesAvantHistorique,
+      NB_PARTIES_SANS_SCALAIRE=CFG.nbPartiesSansScalaire, CACHER_CHRONO_PREMIERE_PARTIE=CFG.cacherChronoPremierePartie,
+      PROBA_SANS_SCALAIRE=CFG.probaSansScalaire, MAX_ZEROS=CFG.maxZeros, URL_ENVOI=CFG.urlEnvoi,
+      FEUILLE_RESULTATS=CFG.feuille, ANGLE_DESSIN=CFG.angleDessin;
+// Valeur d'une BONNE réponse selon le temps t (en s) : tous les points jusqu'à T secondes, puis P·√(T/t)
+// arrondi vers le bas au huitième de P (quart de point pour P=2), avec un plancher.
+// Cohérent avec l'outil d'origine : 9→2 ; 10→2 ; 11→1,75 ; 13→1,75 ; 15→1,5 ; 20→1,25 ; ≥40→0,75.
+function pointsPour(t){
+  const P=CFG.pointsParQuestion, T=CFG.tempsPleinePoints, pas=P/8;
+  if(t<=T) return P;
+  const palier=Math.ceil(P*Math.sqrt(T/t)/pas-1e-9)*pas-pas;
+  return Math.max(Math.min(CFG.plancher,P),Math.min(P,palier));
+}
 
 /* ======================= Géométrie : les 4 bases ======================= */
 // Coordonnées de chaque base dans B1, pour des angles (a, b, c) = (alpha, beta, gamma)
@@ -333,20 +375,20 @@ function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach
 
 function afficherQuestion(){
   const q=questions[courante];
-  $('num').textContent=`Question ${courante+1} / ${NB_QUESTIONS}`;
+  $('num').textContent=modeEssai?'Essai (ne compte pas dans la note)':`Question ${courante+1} / ${questions.length}`;
   $('enonce').innerHTML=enonceQ(q);
   razChoix(); debut=performance.now();
   clearInterval(horloge);
   horloge=setInterval(()=>{ $('chrono').textContent=((performance.now()-debut)/1000).toFixed(0)+' s'; },250);
   $('chrono').textContent='0 s';
-  $('chrono').style.visibility=(partieCourante===1&&CACHER_CHRONO_PREMIERE_PARTIE)?'hidden':'visible';   // le temps est quand même mesuré et compté dans la note
+  $('chrono').style.visibility=(modeEssai||(partieCourante===1&&CACHER_CHRONO_PREMIERE_PARTIE))?'hidden':'visible';   // le temps est quand même mesuré et compté dans la note
 }
 let eleve={prenom:'',nom:''};
 const propre=t=>t.trim().replace(/\s+/g,' ');
 function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom').value).length>=2; }
 // Historique des parties de l'élève, gardé dans le navigateur (par nom). Une partie est enregistrée dès son départ
 // (note = null tant qu'elle n'est pas terminée) : une série abandonnée est donc comptée et signalée « non terminée ».
-let partieCourante=0, cleCourante='', idCourant='';
+let partieCourante=0, cleCourante='', idCourant='', modeEssai=false, idSerie='', corrigees=new Set(), nbFautesSerie=0;
 const memHist={};
 function cleHist(prenom,nom){ return 'hist2:'+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
 function lireHist(cle){
@@ -363,26 +405,34 @@ function lancerPartie(){          // renvoie le numéro de cette partie pour l'�
   ecrireHist(cleCourante,h.slice(-30));
   return h.length;
 }
-function finirPartie(note){
+function finirPartie(note,fautes,max){
   const h=lireHist(cleCourante), e=h.find(x=>x.id===idCourant);
-  if(e){ e.note=note; ecrireHist(cleCourante,h); }
+  if(e){ e.note=note; e.fautes=fautes; e.max=max; ecrireHist(cleCourante,h); }
 }
 function htmlHistorique(cle){
   const h=lireHist(cle);
   if(h.length<NB_PARTIES_AVANT_HISTORIQUE) return '';
   const dateCourte=iso=>new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
-  return '<b>Tes trois dernières parties</b><br>'+h.slice(-3).reverse().map(e=>`${dateCourte(e.d)} — ${e.note===null?'non terminée':fmt(e.note)+' / '+(NB_QUESTIONS*POINTS_PAR_QUESTION)}`).join('<br>');
+  return '<b>Tes trois dernières parties</b><br>'+h.slice(-3).reverse().map(e=>`${dateCourte(e.d)} — ${e.note===null?'non terminée':fmt(e.note)+' / '+(e.max||NB_QUESTIONS*POINTS_PAR_QUESTION)+(typeof e.fautes==='number'?' — '+(e.fautes===0?'aucune erreur':e.fautes+' erreur'+(e.fautes>1?'s':'')):'')}`).join('<br>');
 }
 function majHistoriqueAccueil(){
   $('histAccueil').innerHTML=nomValide()?htmlHistorique(cleHist(propre($('prenom').value),propre($('nom').value))):'';
 }
-function demarrer(){
+function demarrer(essai=false){
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
   try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
   document.body.classList.remove('revue');
-  partieCourante=lancerPartie();
-  questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE); courante=0; resultats=[];
+  modeEssai=essai===true;
+  if(modeEssai){                     // un seul calcul, hors note : ni historique, ni envoi à la feuille, ni compteur de parties
+    partieCourante=0;
+    questions=prendre(banque.filter(q=>!q.zero),1,0);
+  }else{
+    partieCourante=lancerPartie();
+    idSerie='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); corrigees=new Set();
+    questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE);
+  }
+  courante=0; resultats=[];
   $('accueil').classList.add('hidden'); $('fin').classList.add('hidden'); $('jeu').classList.remove('hidden'); $('envoi').textContent='';
   afficherQuestion();
 }
@@ -391,7 +441,7 @@ function valider(){
   const ok=reponseValide(r,q.scal)&&egal(r,q);
   resultats.push({q,r,ok,t,pts:ok?pointsPour(t):0});
   courante++;
-  if(courante<NB_QUESTIONS) afficherQuestion(); else terminer();
+  if(courante<questions.length) afficherQuestion(); else terminer();
 }
 const fmt=x=>String(Math.round(x*100)/100).replace('.',',');
 function terminer(){
@@ -399,13 +449,23 @@ function terminer(){
   $('jeu').classList.add('hidden'); $('fin').classList.remove('hidden');
   const total=resultats.reduce((s,x)=>s+x.pts,0), fautes=resultats.filter(x=>!x.ok).length;
   document.body.classList.add('revue');
-  finirPartie(Math.round(total*100)/100);
-  $('note').textContent=`${fmt(total)} / ${NB_QUESTIONS*POINTS_PAR_QUESTION}`;
-  $('histFin').innerHTML=htmlHistorique(cleCourante);
-  $('bilan').textContent=fautes===0?'Aucune erreur !':`${fautes} erreur${fautes>1?'s':''} sur ${NB_QUESTIONS} questions.`;
+  const maxPoints=questions.length*POINTS_PAR_QUESTION;
+  $('serie').classList.toggle('hidden',!modeEssai);
+  $('rejouer').textContent=modeEssai?'Un autre essai':'Rejouer';
+  nbFautesSerie=fautes;
+  if(modeEssai){
+    $('note').textContent=fautes===0?'✓ Bonne réponse':'✗ Pas tout à fait';
+    $('bilan').textContent="Calcul d'essai : il ne compte pas dans ta note.";
+    $('histFin').innerHTML='';
+  }else{
+    finirPartie(Math.round(total*100)/100,fautes,maxPoints);
+    $('note').textContent=`${fmt(total)} / ${maxPoints}`;
+    $('histFin').innerHTML=htmlHistorique(cleCourante);
+    $('bilan').textContent=fautes===0?'Aucune erreur !':`${fautes} erreur${fautes>1?'s':''} sur ${questions.length} questions.`;
+  }
   let h='<tr><th>Question</th><th>énoncé</th><th></th><th>temps (s)</th><th>note</th></tr>';
   resultats.forEach((x,n)=>{ h+=`<tr><td>Q${n+1}</td><td>${enonceQ(x.q).replace(' = ?','')}</td><td class="${x.ok?'ok':'ko'}">${x.ok?'✓':'✗'}</td><td>${fmt(x.t)}</td><td>${fmt(x.pts)}</td></tr>`; });
-  $('tableau').innerHTML=h;
+  $('tableau').innerHTML=modeEssai?'':h;
   const fautesListe=resultats.map((x,n)=>({x,n})).filter(e=>!e.x.ok);
   $('erreurs').classList.toggle('hidden',fautesListe.length===0);
   const liste=$('listeErreurs'); liste.innerHTML='';
@@ -422,13 +482,15 @@ function terminer(){
       const r=lireReponse(pre), ok=reponseValide(r,x.q.scal)&&egal(r,x.q);
       const m=$(pre+'_msg'); m.className=ok?'ok':'ko';
       m.textContent=ok?'✓ Bonne réponse !':'✗ Ce n\'est pas la bonne réponse, essaie encore.';
+      if(ok&&!modeEssai&&!corrigees.has(n)){ corrigees.add(n); envoyerCorrection(); }
     };
   });
-  envoyer(total,fautes);
+  if(modeEssai) $('envoi').textContent=''; else envoyer(total,fautes);
 }
 function envoyer(total,fautes){
   if(!URL_ENVOI){ $('envoi').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; return; }
-  const charge={feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,fautes,date:new Date().toISOString(),
+  const charge={type:'serie',id:idSerie,feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,max:questions.length*POINTS_PAR_QUESTION,fautes,
+    duree:Math.round(resultats.reduce((s,x)=>s+x.t,0)),date:new Date().toISOString(),
     detail:resultats.map((x,n)=>`Q${n+1} ${x.q.p}${x.q.i}${x.q.scal?'.':'^'}${x.q.q}${x.q.j} : ${x.ok?'OK':'faux'} ${Math.round(x.t*10)/10} s -> ${x.pts}`)};
   $('envoi').textContent='Envoi de ta note…';
   const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
@@ -437,13 +499,78 @@ function envoyer(total,fautes){
   essai();
 }
 
+function envoyerCorrection(){       // l'élève vient de retrouver une bonne réponse dans « Revoir mes erreurs »
+  if(!URL_ENVOI) return;
+  const charge={type:'correction',id:idSerie,feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,fautes:nbFautesSerie,
+    corrigees:[...corrigees].sort((a,b)=>a-b).map(n=>n+1)};
+  fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)}).catch(()=>{});
+}
 construireChoix($('choix'),'g',majApercu); dessinerFigures();
+const MOTS={1:'un',2:'deux',3:'trois',4:'quatre',5:'cinq',6:'six',7:'sept',8:'huit',9:'neuf',10:'dix',12:'douze',15:'quinze',20:'vingt'};
+$('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits suivants.`;
+if(CFG.essaiTest){ $('essai').classList.remove('hidden'); $('essai').onclick=()=>{ if(nomValide()) demarrer(true); }; }
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
-['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=!nomValide(); majHistoriqueAccueil(); }));
-try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer();      // même élève : on relance directement
+['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=$('essai').disabled=!nomValide(); majHistoriqueAccueil(); }));
+try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
 $('changer').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
 $('valider').onclick=valider;
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
+
+/* ======================= Page de réglage (ouvrir la page avec ?admin) ======================= */
+if(/[?&]admin\b/.test(location.search)){
+  ['accueil','jeu','fin','eleve'].forEach(i=>$(i).classList.add('hidden')); document.querySelector('.panel').classList.add('hidden');
+  $('admin').classList.remove('hidden');
+  const CHAMPS=[
+    {k:'nbQuestions',t:'n',l:'Nombre de questions par série'},
+    {k:'pointsParQuestion',t:'n',l:'Points d\'une question réussie (note maximale = questions × points)'},
+    {k:'tempsPleinePoints',t:'n',l:'Temps (en secondes) pour avoir tous les points'},
+    {k:'plancher',t:'n',l:'Points minimum d\'une bonne réponse très lente'},
+    {k:'probaSansScalaire',t:'pct',l:'Part des séries qui contiennent des produits scalaires (%)'},
+    {k:'nbPartiesSansScalaire',t:'n',l:'Nombre de premières parties sans produit scalaire'},
+    {k:'cacherChronoPremierePartie',t:'b',l:'Cacher le chronomètre pendant la première partie'},
+    {k:'nbPartiesAvantHistorique',t:'n',l:'Afficher les 3 dernières notes à partir de la partie n°'},
+    {k:'essaiTest',t:'b',l:'Proposer un « essai : un seul calcul »'},
+    {k:'consigne',t:'s',l:'Texte d\'accueil (vide = texte automatique)'},
+    {k:'feuille',t:'s',l:'Onglet de la feuille Google qui reçoit les notes'},
+    {k:'urlEnvoi',t:'s',l:'Adresse du script Google (vide = aucun enregistrement)'}
+  ];
+  const zone=$('adminChamps'); const saisies={};
+  for(const c of CHAMPS){
+    const d=document.createElement('p'); d.style.margin='6px 0';
+    const lab=document.createElement('label'); lab.textContent=c.l+' : '; lab.style.display='block';
+    let el;
+    if(c.t==='b'){ el=document.createElement('input'); el.type='checkbox'; el.checked=!!CFG[c.k]; lab.textContent=''; lab.append(el,' '+c.l); }
+    else{
+      el=document.createElement('input'); el.type=c.t==='s'?'text':'number';
+      if(c.t!=='s'){ el.step=c.k==='plancher'?'0.05':'1'; const bo=c.t==='pct'?[0,100]:BORNES[c.k]; el.min=bo[0]; el.max=bo[1]; }
+      el.value=c.t==='pct'?Math.round((1-CFG[c.k])*100):CFG[c.k];
+      if(c.t==='s') el.style.width='100%'; else el.style.width='6em';
+      lab.appendChild(el);
+    }
+    d.appendChild(lab); zone.appendChild(d); saisies[c.k]=[el,c.t];
+    el.addEventListener('input',majLien); el.addEventListener('change',majLien);
+  }
+  function lireSaisies(){
+    const o={};
+    for(const c of CHAMPS){
+      const [el,t]=saisies[c.k]; let v;
+      if(t==='b') v=el.checked; else if(t==='s') v=el.value.trim(); else{ v=parseFloat(String(el.value).replace(',','.')); if(!isFinite(v)) v=DEFAUTS[c.k]; if(t==='pct') v=1-Math.min(100,Math.max(0,v))/100; }
+      if(v!==DEFAUTS[c.k]) o[c.k]=v;
+    }
+    return o;
+  }
+  function majLien(){
+    const o=lireSaisies(); const base=location.origin==='null'?location.href.split(/[?#]/)[0]:location.origin+location.pathname;
+    const code=btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_');
+    const lien=base+(Object.keys(o).length?'#cfg='+code:'');
+    $('adminLien').value=lien; $('adminOuvrir').href=lien;
+    const u=o.urlEnvoi!==undefined?o.urlEnvoi:DEFAUTS.urlEnvoi;
+    $('adminMsg').textContent=u===DEFAUTS.urlEnvoi&&DEFAUTS.urlEnvoi?'Attention : l\'adresse d\'envoi est encore celle par défaut : les notes de tes élèves iraient dans la feuille de l\'auteur de ce fichier. Remplace-la par la tienne (ou vide-la).':'';
+  }
+  $('adminCopier').onclick=()=>{ $('adminLien').select(); try{ navigator.clipboard.writeText($('adminLien').value); }catch(e){ document.execCommand('copy'); } };
+  $('adminRaz').onclick=()=>{ location.hash=''; location.reload(); };
+  majLien();
+}
 </script>
 </body>
 </html>
