@@ -121,6 +121,7 @@ function pointsPour(t){
   return Math.max(PLANCHER,Math.min(POINTS_PAR_QUESTION,palier));
 }
 // Envoi facultatif de la note (voir README) : mettre l'URL du script Google Apps Script
+const FEUILLE_RESULTATS = "Notes V2";   // onglet de la feuille Google qui reçoit les notes de cette version (doit être autorisé dans le script)
 const URL_ENVOI = "https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec";             // (laisser vide pour tester sans enregistrement)
 const ANGLE_DESSIN = 25;           // angle (°) utilisé sur les figures
 
@@ -345,7 +346,7 @@ function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom'
 // (note = null tant qu'elle n'est pas terminée) : une série abandonnée est donc comptée et signalée « non terminée ».
 let partieCourante=0, cleCourante='', idCourant='';
 const memHist={};
-function cleHist(prenom,nom){ return 'hist:'+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function cleHist(prenom,nom){ return 'hist2:'+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
 function lireHist(cle){
   let h=memHist[cle];
   try{ const t=localStorage.getItem(cle); if(t) h=JSON.parse(t); }catch(e){}
@@ -423,7 +424,7 @@ function terminer(){
 }
 function envoyer(total,fautes){
   if(!URL_ENVOI){ $('envoi').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; return; }
-  const charge={prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,fautes,date:new Date().toISOString(),
+  const charge={feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,fautes,date:new Date().toISOString(),
     detail:resultats.map((x,n)=>`Q${n+1} ${x.q.p}${x.q.i}${x.q.scal?'.':'^'}${x.q.q}${x.q.j} : ${x.ok?'OK':'faux'} ${Math.round(x.t*10)/10} s -> ${x.pts}`)};
   $('envoi').textContent='Envoi de ta note…';
   const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
