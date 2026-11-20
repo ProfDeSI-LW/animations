@@ -113,9 +113,14 @@
     <p class="center"><button class="primary" id="rejouer">Rejouer</button> <button id="serie" class="hidden">Lancer une série</button></p>
     <p class="center discret"><button id="changer" title="Corriger le nom">erreur de nom ?</button></p>
   </section>
+  <p id="version" class="meta center" style="margin-top:28px;font-size:.72rem;opacity:.6"></p>
 </main>
 
 <script>
+/* ======================= Version ======================= */
+// À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
+const VERSION='2.3', VERSION_DATE='20/11/2026';
+
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
 // (page de réglage) qui fabrique un lien à donner aux élèves ; les réglages voyagent dans le lien (#cfg=…).
@@ -357,7 +362,9 @@ function construireChoix(zone,prefixe,onchange){
   zone.innerHTML='';
   for(const g of GROUPES){
     const col=document.createElement('div'); col.className='col';
-    const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none">—</span>`; col.appendChild(l0);
+    if(g.nom!=='s'){      // pas de case neutre « — » au-dessus de + et − : elle se lirait comme un moins
+      const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none">—</span>`; col.appendChild(l0);
+    }
     for(const [txt,val] of g.valeurs){
       const l=document.createElement('label');
       l.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="${val}"><span>${txt}</span>`; col.appendChild(l);
@@ -372,7 +379,7 @@ function lireReponse(prefixe='g'){
   return {s:s===null?1:Number(s), sx:s!==null, v:val('v'), k:k===null?null:Number(k), f:val('f'), a:val('a')};
 }
 function majApercu(){ const q=questions[courante]; $('apercu').innerHTML=texteReponse(lireReponse(),q&&q.scal); }
-function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach(e=>e.checked=true); majApercu(); }
+function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach(e=>e.checked=true); document.querySelectorAll('#choix input[name$="_s"]').forEach(e=>e.checked=false); majApercu(); }
 
 function afficherQuestion(){
   const q=questions[courante];
@@ -401,7 +408,7 @@ function ecrireHist(cle,h){ memHist[cle]=h; try{ localStorage.setItem(cle,JSON.s
 function lancerPartie(){          // renvoie le numéro de cette partie pour l'élève
   cleCourante=cleHist(eleve.prenom,eleve.nom);
   const h=lireHist(cleCourante);
-  idCourant=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  idCourant=idSerie;                // même identifiant que la série envoyée à la feuille (colonne Id du Journal)
   h.push({id:idCourant,d:new Date().toISOString(),note:null});
   ecrireHist(cleCourante,h.slice(-30));
   return h.length;
@@ -468,8 +475,8 @@ function demarrer(essai=false){
     partieCourante=0;
     questions=prendre(banque.filter(q=>!q.zero),1,0);
   }else{
-    partieCourante=lancerPartie();
     idSerie='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); corrigees=new Set();
+    partieCourante=lancerPartie();
     questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE);
   }
   courante=0; resultats=[];
@@ -545,6 +552,7 @@ function envoyerCorrection(){       // l'élève vient de retrouver une bonne r�
     corrigees:[...corrigees].sort((a,b)=>a-b).map(n=>n+1)};
   fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)}).catch(()=>{});
 }
+$('version').textContent=`Version ${VERSION} — ${VERSION_DATE}`; document.title+=' · v'+VERSION;
 construireChoix($('choix'),'g',majApercu); dessinerFigures();
 const MOTS={1:'un',2:'deux',3:'trois',4:'quatre',5:'cinq',6:'six',7:'sept',8:'huit',9:'neuf',10:'dix',12:'douze',15:'quinze',20:'vingt'};
 $('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits suivants.`;
