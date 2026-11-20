@@ -93,12 +93,13 @@
   <section id="accueil" class="intro">
     <p id="consigne"></p>
     <form id="identite" autocomplete="off">
-      <p><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
+      <p id="nomMemorise" class="center hidden">Élève : <b id="nomMemoriseTexte"></b> <span class="discret" style="margin:0"><button type="button" id="changer2" title="Corriger le nom ou changer d'élève">erreur de nom ?</button></span></p>
+      <p id="saisieNom"><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
          <input type="text" id="nom" placeholder="NOM" autocomplete="family-name"></p>
       <p id="choixExo" class="center" style="margin:6px 0">
         <label style="margin-right:14px;cursor:pointer"><input type="radio" name="exo" value="vectoriel" checked> Produits vectoriels</label>
         <label style="cursor:pointer"><input type="radio" name="exo" value="scalaire"> Produits scalaires</label></p>
-      <p class="meta">Ton nom s'affichera pendant toute la partie et sera enregistré avec ta note.</p>
+      <p class="meta" id="infoNom">Ton nom s'affichera pendant toute la partie et sera enregistré avec ta note.</p>
       <p><button class="primary" id="demarrer" type="submit" disabled>Démarrer</button>
          <button type="button" id="essai" class="hidden" disabled>Essai : un seul calcul</button></p>
     </form>
@@ -135,7 +136,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.13', VERSION_DATE='20/11/2026';
+const VERSION='2.14', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -520,6 +521,7 @@ function majHistoriqueAccueil(){
 function demarrer(essai=false){
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
   try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
+  saisieNomOuverte=false; afficherNom();
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
   document.body.classList.remove('revue');
   modeEssai=essai===true;
@@ -623,9 +625,18 @@ document.querySelectorAll('input[name="exo"]').forEach(e=>e.addEventListener('ch
 if(CFG.essaiTest){ $('essai').classList.remove('hidden'); $('essai').onclick=()=>{ if(nomValide()) demarrer(true); }; }
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=$('essai').disabled=!nomValide(); majHistoriqueAccueil(); }));
-try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
-$('changer').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
-$('autreExo').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); };
+// Le nom est mémorisé : la saisie n'est redemandée que si l'élève clique sur « erreur de nom ? ».
+let saisieNomOuverte=false;
+function afficherNom(){
+  const memo=nomValide()&&!saisieNomOuverte;
+  ['saisieNom','infoNom'].forEach(i=>$(i).classList.toggle('hidden',memo)); $('nomMemorise').classList.toggle('hidden',!memo);
+  if(memo) $('nomMemoriseTexte').textContent=`${propre($('prenom').value)} ${propre($('nom').value).toUpperCase()}`;
+}
+function ouvrirSaisieNom(){ saisieNomOuverte=true; afficherNom(); $('prenom').focus(); }
+$('changer2').onclick=ouvrirSaisieNom;
+try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} afficherNom(); majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
+$('changer').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); ouvrirSaisieNom(); };
+$('autreExo').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); afficherNom(); };
 majExercice();
 $('valider').onclick=valider;
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
