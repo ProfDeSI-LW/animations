@@ -33,7 +33,7 @@
   .col label{display:flex;align-items:center;gap:5px;cursor:pointer;min-height:36px;padding:2px 4px;border-radius:8px;white-space:nowrap}
   .col label:hover{background:var(--card)}
   .col input{width:20px;height:20px;accent-color:var(--accent);flex:none}
-  .col .none{color:var(--muted);font-size:.8rem}
+  .col .none{color:var(--muted);font-size:1rem}
   .answer{text-align:center;font-size:1.35rem;min-height:2.2rem;margin:.2rem 0 .6rem}
   .answer sub{font-size:.65em}
   button{font:inherit;padding:8px 20px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
@@ -119,7 +119,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.3', VERSION_DATE='20/11/2026';
+const VERSION='2.4', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -136,6 +136,7 @@ const DEFAUTS = {
   nbPartiesAvantHistorique: 3,     // à partir de N parties lancées, l'élève voit ses 3 dernières notes
   essaiTest: true,                 // bouton « Essai : un seul calcul » sur l'accueil
   consigne: '',                    // texte d'accueil ; vide = « Lancer une série de N calculs. Évaluer les produits suivants. »
+  exercice: 'vectoriel',           // 'vectoriel' (produits vectoriels, parfois 1-2 scalaires) ou 'scalaire' (uniquement des produits scalaires)
   feuille: 'Notes V2',             // onglet de la feuille Google qui reçoit les notes (doit être autorisé dans le script)
   // Adresse du script Google Apps Script (laisser vide pour ne rien enregistrer)
   urlEnvoi: 'https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec',
@@ -143,7 +144,7 @@ const DEFAUTS = {
 };
 const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],plancher:[0,10],probaSansScalaire:[0,1],
   nbPartiesSansScalaire:[0,20],maxZeros:[0,5],nbPartiesAvantHistorique:[1,20],angleDessin:[5,60]};
-const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'];
+const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'], EXERCICES=['vectoriel','scalaire'];
 function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<json encodé en base64>
   try{
     const m=location.hash.match(/cfg=([^&]+)/); if(!m) return {};
@@ -151,6 +152,7 @@ function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<j
     const c={};
     for(const k in o){
       if(BORNES[k]&&typeof o[k]==='number'&&isFinite(o[k])) c[k]=Math.min(BORNES[k][1],Math.max(BORNES[k][0],o[k]));
+      else if(k==='exercice'&&EXERCICES.includes(o[k])) c[k]=o[k];
       else if(CLES_BOOL.includes(k)&&typeof o[k]==='boolean') c[k]=o[k];
       else if(CLES_TEXTE.includes(k)&&typeof o[k]==='string'){
         if(k==='urlEnvoi'&&o[k]&&!o[k].startsWith('https://script.google.com/')) continue;   // seules les adresses Google Apps Script sont acceptées
@@ -164,7 +166,10 @@ const CFG=Object.assign({},DEFAUTS,lireConfigUrl());
 const NB_QUESTIONS=CFG.nbQuestions, POINTS_PAR_QUESTION=CFG.pointsParQuestion, NB_PARTIES_AVANT_HISTORIQUE=CFG.nbPartiesAvantHistorique,
       NB_PARTIES_SANS_SCALAIRE=CFG.nbPartiesSansScalaire, CACHER_CHRONO_PREMIERE_PARTIE=CFG.cacherChronoPremierePartie,
       PROBA_SANS_SCALAIRE=CFG.probaSansScalaire, MAX_ZEROS=CFG.maxZeros, URL_ENVOI=CFG.urlEnvoi,
-      FEUILLE_RESULTATS=CFG.feuille, ANGLE_DESSIN=CFG.angleDessin;
+      ANGLE_DESSIN=CFG.angleDessin, SCALAIRE=CFG.exercice==='scalaire';
+// Les deux exercices ont chacun leur onglet de notes (« Notes V2 » / « Notes V2 scalaire ») et leur historique local.
+const FEUILLE_RESULTATS=CFG.feuille+(SCALAIRE&&!/scalaire$/i.test(CFG.feuille)?' scalaire':'');
+if(SCALAIRE){ document.querySelector('h1').textContent='Produits scalaires'; document.title='Produits scalaires'; }
 // Valeur d'une BONNE réponse selon le temps t (en s) : tous les points jusqu'à T secondes, puis P·√(T/t)
 // arrondi vers le bas au huitième de P (quart de point pour P=2), avec un plancher.
 // Cohérent avec l'outil d'origine : 9→2 ; 10→2 ; 11→1,75 ; 13→1,75 ; 15→1,5 ; 20→1,25 ; ≥40→0,75.
@@ -362,9 +367,7 @@ function construireChoix(zone,prefixe,onchange){
   zone.innerHTML='';
   for(const g of GROUPES){
     const col=document.createElement('div'); col.className='col';
-    if(g.nom!=='s'){      // pas de case neutre « — » au-dessus de + et − : elle se lirait comme un moins
-      const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none">—</span>`; col.appendChild(l0);
-    }
+    const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none" title="aucun choix">∅</span>`; col.appendChild(l0);   // case neutre (aucun choix), alignée sur toutes les colonnes
     for(const [txt,val] of g.valeurs){
       const l=document.createElement('label');
       l.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="${val}"><span>${txt}</span>`; col.appendChild(l);
@@ -379,7 +382,7 @@ function lireReponse(prefixe='g'){
   return {s:s===null?1:Number(s), sx:s!==null, v:val('v'), k:k===null?null:Number(k), f:val('f'), a:val('a')};
 }
 function majApercu(){ const q=questions[courante]; $('apercu').innerHTML=texteReponse(lireReponse(),q&&q.scal); }
-function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach(e=>e.checked=true); document.querySelectorAll('#choix input[name$="_s"]').forEach(e=>e.checked=false); majApercu(); }
+function razChoix(){ document.querySelectorAll('#choix input[value=""]').forEach(e=>e.checked=true); majApercu(); }
 
 function afficherQuestion(){
   const q=questions[courante];
@@ -398,7 +401,7 @@ function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom'
 // (note = null tant qu'elle n'est pas terminée) : une série abandonnée est donc comptée et signalée « non terminée ».
 let partieCourante=0, cleCourante='', idCourant='', modeEssai=false, idSerie='', corrigees=new Set(), nbFautesSerie=0;
 const memHist={};
-function cleHist(prenom,nom){ return 'hist2:'+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function cleHist(prenom,nom){ return (SCALAIRE?'hist2s:':'hist2:')+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
 function lireHist(cle){
   let h=memHist[cle];
   try{ const t=localStorage.getItem(cle); if(t) h=JSON.parse(t); }catch(e){}
@@ -425,7 +428,7 @@ function htmlHistorique(cle){
 // Notes mises de côté : l'élève choisit ses deux dernières parties terminées (consécutives) ; elles sont gardées à part
 // et ne changent que s'il en met deux autres de côté. Envoyées à la feuille (onglet « … validées », une ligne par élève, écrasée).
 const memValide={};
-const cleValide=cle=>'valide2:'+cle.slice(6);
+const cleValide=cle=>'valide2:'+cle.slice(4);   // « hist2:nom » -> « valide2:nom » ; « hist2s:nom » -> « valide2:s:nom »
 function lireValide(cle){
   let v=memValide[cle];
   try{ const t=localStorage.getItem(cleValide(cle)); if(t) v=JSON.parse(t); }catch(e){}
@@ -473,11 +476,11 @@ function demarrer(essai=false){
   modeEssai=essai===true;
   if(modeEssai){                     // un seul calcul, hors note : ni historique, ni envoi à la feuille, ni compteur de parties
     partieCourante=0;
-    questions=prendre(banque.filter(q=>!q.zero),1,0);
+    questions=prendre((SCALAIRE?banqueScal:banque).filter(q=>!q.zero),1,0);
   }else{
     idSerie='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); corrigees=new Set();
     partieCourante=lancerPartie();
-    questions=tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE);
+    questions=SCALAIRE?prendre(banqueScal,NB_QUESTIONS,MAX_ZEROS):tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE);
   }
   courante=0; resultats=[];
   $('accueil').classList.add('hidden'); $('fin').classList.add('hidden'); $('jeu').classList.remove('hidden'); $('envoi').textContent='';
@@ -555,7 +558,7 @@ function envoyerCorrection(){       // l'élève vient de retrouver une bonne r�
 $('version').textContent=`Version ${VERSION} — ${VERSION_DATE}`; document.title+=' · v'+VERSION;
 construireChoix($('choix'),'g',majApercu); dessinerFigures();
 const MOTS={1:'un',2:'deux',3:'trois',4:'quatre',5:'cinq',6:'six',7:'sept',8:'huit',9:'neuf',10:'dix',12:'douze',15:'quinze',20:'vingt'};
-$('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits suivants.`;
+$('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits ${SCALAIRE?'scalaires':''} suivants.`.replace('  ',' ');
 if(CFG.essaiTest){ $('essai').classList.remove('hidden'); $('essai').onclick=()=>{ if(nomValide()) demarrer(true); }; }
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=$('essai').disabled=!nomValide(); majHistoriqueAccueil(); }));
@@ -569,6 +572,7 @@ if(/[?&]admin\b/.test(location.search)){
   ['accueil','jeu','fin','eleve'].forEach(i=>$(i).classList.add('hidden')); document.querySelector('.panel').classList.add('hidden');
   $('admin').classList.remove('hidden');
   const CHAMPS=[
+    {k:'exercice',t:'e',l:'Type d\'exercice'},
     {k:'nbQuestions',t:'n',l:'Nombre de questions par série'},
     {k:'pointsParQuestion',t:'n',l:'Points d\'une question réussie (note maximale = questions × points)'},
     {k:'tempsPleinePoints',t:'n',l:'Temps (en secondes) pour avoir tous les points'},
@@ -588,6 +592,11 @@ if(/[?&]admin\b/.test(location.search)){
     const lab=document.createElement('label'); lab.textContent=c.l+' : '; lab.style.display='block';
     let el;
     if(c.t==='b'){ el=document.createElement('input'); el.type='checkbox'; el.checked=!!CFG[c.k]; lab.textContent=''; lab.append(el,' '+c.l); }
+    else if(c.t==='e'){
+      el=document.createElement('select');
+      [['vectoriel','Produits vectoriels (avec parfois 1 ou 2 produits scalaires)'],['scalaire','Produits scalaires uniquement (onglet « … scalaire » de la feuille)']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; el.appendChild(o); });
+      el.value=CFG[c.k]; lab.appendChild(el);
+    }
     else{
       el=document.createElement('input'); el.type=c.t==='s'?'text':'number';
       if(c.t!=='s'){ el.step=c.k==='plancher'?'0.05':'1'; const bo=c.t==='pct'?[0,100]:BORNES[c.k]; el.min=bo[0]; el.max=bo[1]; }
@@ -602,7 +611,7 @@ if(/[?&]admin\b/.test(location.search)){
     const o={};
     for(const c of CHAMPS){
       const [el,t]=saisies[c.k]; let v;
-      if(t==='b') v=el.checked; else if(t==='s') v=el.value.trim(); else{ v=parseFloat(String(el.value).replace(',','.')); if(!isFinite(v)) v=DEFAUTS[c.k]; if(t==='pct') v=1-Math.min(100,Math.max(0,v))/100; }
+      if(t==='b') v=el.checked; else if(t==='s'||t==='e') v=el.value.trim(); else{ v=parseFloat(String(el.value).replace(',','.')); if(!isFinite(v)) v=DEFAUTS[c.k]; if(t==='pct') v=1-Math.min(100,Math.max(0,v))/100; }
       if(v!==DEFAUTS[c.k]) o[c.k]=v;
     }
     return o;
