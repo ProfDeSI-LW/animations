@@ -134,7 +134,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.7', VERSION_DATE='20/11/2026';
+const VERSION='2.8', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -378,17 +378,21 @@ const GROUPES=[
   {nom:'a',  valeurs:[['α','alpha'],['β','beta'],['γ','gamma']],aff:v=>v[0]},
 ];
 function construireChoix(zone,prefixe,onchange){
-  zone.innerHTML='';
+  zone.innerHTML=''; let nbCol=0;
   for(const g of GROUPES){
+    if(SCALAIRE&&g.nom==='k') continue;                       // produits scalaires : pas d'indice de base
+    const valeurs=SCALAIRE&&g.nom==='v'?g.valeurs.filter(x=>x[1]==='0'):g.valeurs;   // ... et pas de x, y, z : seulement « 0 »
+    nbCol++;
     const col=document.createElement('div'); col.className='col';
     const l0=document.createElement('label'); l0.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="" checked><span class="none" title="aucun choix">∅</span>`; col.appendChild(l0);   // case neutre (aucun choix), alignée sur toutes les colonnes
-    for(const [txt,val] of g.valeurs){
+    for(const [txt,val] of valeurs){
       const l=document.createElement('label');
       l.innerHTML=`<input type="radio" name="${prefixe}_${g.nom}" value="${val}"><span>${txt}</span>`; col.appendChild(l);
     }
     zone.appendChild(col);
   }
-  if(onchange) zone.addEventListener('change',onchange);
+  zone.style.gridTemplateColumns=`repeat(${nbCol},minmax(0,1fr))`; zone.style.maxWidth=(nbCol*104)+'px';
+  zone.onchange=onchange||null;
 }
 function lireReponse(prefixe='g'){
   const val=n=>{const e=document.querySelector(`input[name="${prefixe}_${n}"]:checked`);return e&&e.value!==''?e.value:null};
@@ -577,6 +581,7 @@ function majExercice(){
   SCALAIRE=document.querySelector('input[name="exo"]:checked').value==='scalaire';
   try{ localStorage.setItem('exo',SCALAIRE?'scalaire':'vectoriel'); }catch(e){}
   const titre=SCALAIRE?'Produits scalaires':'Produits vectoriels';
+  construireChoix($('choix'),'g',majApercu);
   document.querySelector('h1').textContent=titre; document.title=titre+' · v'+VERSION;
   $('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits ${SCALAIRE?'scalaires':'suivants'}${SCALAIRE?' suivants':''}.`.replace(/ +/g,' ');
   majHistoriqueAccueil();
