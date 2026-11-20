@@ -66,6 +66,13 @@
   <div id="eleve" class="meta hidden" style="text-align:right"></div>
   <div class="panel"><svg id="figures" viewBox="20 80 860 190" role="img" aria-label="Trois figures de changement de base"></svg></div>
 
+  <!-- Verrou de la page de réglage -->
+  <section id="verrou" class="hidden">
+    <h2 style="font-size:1.1rem">Réglages de l'enseignant</h2>
+    <form id="verrouForm"><p><input type="password" id="verrouMdp" placeholder="Mot de passe" autocomplete="current-password"> <button class="primary" type="submit">Ouvrir</button></p>
+    <p class="meta" id="verrouMsg"></p></form>
+  </section>
+
   <!-- Page de réglage (ouvrir la page avec ?admin) -->
   <section id="admin" class="hidden">
     <h2 style="font-size:1.1rem">Réglages de l'enseignant</h2>
@@ -75,6 +82,11 @@
     <textarea id="adminLien" readonly rows="4" style="width:100%;font:12px/1.3 monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
     <p><button class="primary" id="adminCopier">Copier le lien</button> <a id="adminOuvrir" target="_blank" rel="noopener">Ouvrir le lien (test)</a> <button id="adminRaz">Valeurs par défaut</button></p>
     <p class="meta" id="adminMsg"></p>
+    <details style="margin-top:14px"><summary>Changer le mot de passe</summary>
+      <p class="meta">Saisis le nouveau mot de passe : la page calcule la ligne à coller dans le code (à la place de la ligne <code>const MDP=…</code>). Le mot de passe lui-même n'est pas stocké.</p>
+      <p><input type="text" id="nouveauMdp" placeholder="Nouveau mot de passe" autocomplete="off"> <button type="button" id="nouveauMdpOk">Calculer</button></p>
+      <textarea id="nouveauMdpSortie" readonly rows="3" style="width:100%;font:12px/1.3 monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
+    </details>
   </section>
 
   <!-- Accueil -->
@@ -83,6 +95,9 @@
     <form id="identite" autocomplete="off">
       <p><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
          <input type="text" id="nom" placeholder="NOM" autocomplete="family-name"></p>
+      <p id="choixExo" class="center" style="margin:6px 0">
+        <label style="margin-right:14px;cursor:pointer"><input type="radio" name="exo" value="vectoriel" checked> Produits vectoriels</label>
+        <label style="cursor:pointer"><input type="radio" name="exo" value="scalaire"> Produits scalaires</label></p>
       <p class="meta">Ton nom s'affichera pendant toute la partie et sera enregistré avec ta note.</p>
       <p><button class="primary" id="demarrer" type="submit" disabled>Démarrer</button>
          <button type="button" id="essai" class="hidden" disabled>Essai : un seul calcul</button></p>
@@ -110,7 +125,7 @@
     <table id="tableau"></table>
     <div id="envoi" class="meta center"></div>
     <details id="erreurs"><summary>Revoir mes erreurs et proposer la bonne réponse</summary><div id="listeErreurs"></div></details>
-    <p class="center"><button class="primary" id="rejouer">Rejouer</button> <button id="serie" class="hidden">Lancer une série</button></p>
+    <p class="center"><button class="primary" id="rejouer">Rejouer</button> <button id="serie" class="hidden">Lancer une série</button> <button id="autreExo">Changer d'exercice</button></p>
     <p class="center discret"><button id="changer" title="Corriger le nom">erreur de nom ?</button></p>
   </section>
   <p id="version" class="meta center" style="margin-top:28px;font-size:.72rem;opacity:.6"></p>
@@ -119,7 +134,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.4', VERSION_DATE='20/11/2026';
+const VERSION='2.6', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -136,7 +151,6 @@ const DEFAUTS = {
   nbPartiesAvantHistorique: 3,     // à partir de N parties lancées, l'élève voit ses 3 dernières notes
   essaiTest: true,                 // bouton « Essai : un seul calcul » sur l'accueil
   consigne: '',                    // texte d'accueil ; vide = « Lancer une série de N calculs. Évaluer les produits suivants. »
-  exercice: 'vectoriel',           // 'vectoriel' (produits vectoriels, parfois 1-2 scalaires) ou 'scalaire' (uniquement des produits scalaires)
   feuille: 'Notes V2',             // onglet de la feuille Google qui reçoit les notes (doit être autorisé dans le script)
   // Adresse du script Google Apps Script (laisser vide pour ne rien enregistrer)
   urlEnvoi: 'https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec',
@@ -144,7 +158,7 @@ const DEFAUTS = {
 };
 const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],plancher:[0,10],probaSansScalaire:[0,1],
   nbPartiesSansScalaire:[0,20],maxZeros:[0,5],nbPartiesAvantHistorique:[1,20],angleDessin:[5,60]};
-const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'], EXERCICES=['vectoriel','scalaire'];
+const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'];
 function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<json encodé en base64>
   try{
     const m=location.hash.match(/cfg=([^&]+)/); if(!m) return {};
@@ -152,7 +166,6 @@ function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<j
     const c={};
     for(const k in o){
       if(BORNES[k]&&typeof o[k]==='number'&&isFinite(o[k])) c[k]=Math.min(BORNES[k][1],Math.max(BORNES[k][0],o[k]));
-      else if(k==='exercice'&&EXERCICES.includes(o[k])) c[k]=o[k];
       else if(CLES_BOOL.includes(k)&&typeof o[k]==='boolean') c[k]=o[k];
       else if(CLES_TEXTE.includes(k)&&typeof o[k]==='string'){
         if(k==='urlEnvoi'&&o[k]&&!o[k].startsWith('https://script.google.com/')) continue;   // seules les adresses Google Apps Script sont acceptées
@@ -166,10 +179,11 @@ const CFG=Object.assign({},DEFAUTS,lireConfigUrl());
 const NB_QUESTIONS=CFG.nbQuestions, POINTS_PAR_QUESTION=CFG.pointsParQuestion, NB_PARTIES_AVANT_HISTORIQUE=CFG.nbPartiesAvantHistorique,
       NB_PARTIES_SANS_SCALAIRE=CFG.nbPartiesSansScalaire, CACHER_CHRONO_PREMIERE_PARTIE=CFG.cacherChronoPremierePartie,
       PROBA_SANS_SCALAIRE=CFG.probaSansScalaire, MAX_ZEROS=CFG.maxZeros, URL_ENVOI=CFG.urlEnvoi,
-      ANGLE_DESSIN=CFG.angleDessin, SCALAIRE=CFG.exercice==='scalaire';
-// Les deux exercices ont chacun leur onglet de notes (« Notes V2 » / « Notes V2 scalaire ») et leur historique local.
-const FEUILLE_RESULTATS=CFG.feuille+(SCALAIRE&&!/scalaire$/i.test(CFG.feuille)?' scalaire':'');
-if(SCALAIRE){ document.querySelector('h1').textContent='Produits scalaires'; document.title='Produits scalaires'; }
+      ANGLE_DESSIN=CFG.angleDessin;
+// L'élève choisit sur l'accueil entre l'exercice « produits vectoriels » (avec parfois un produit scalaire) et l'exercice
+// « produits scalaires ». Chacun a son onglet de notes (« Notes V2 » / « Notes V2 scalaire »), son historique et ses notes mises de côté.
+let SCALAIRE=false, feuilleCourante=CFG.feuille;
+const feuillePour=sc=>CFG.feuille+(sc&&!/scalaire$/i.test(CFG.feuille)?' scalaire':'');
 // Valeur d'une BONNE réponse selon le temps t (en s) : tous les points jusqu'à T secondes, puis P·√(T/t)
 // arrondi vers le bas au huitième de P (quart de point pour P=2), avec un plancher.
 // Cohérent avec l'outil d'origine : 9→2 ; 10→2 ; 11→1,75 ; 13→1,75 ; 15→1,5 ; 20→1,25 ; ≥40→0,75.
@@ -456,7 +470,7 @@ function majValide(){
 }
 function envoyerValide(nv){
   const m=$('envoiValide'); if(!URL_ENVOI||!m) return;
-  const charge={type:'valide',feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,notes:nv.notes,max:nv.max,fautes:nv.fautes,dates:nv.dates,ids:nv.ids,date:nv.d};
+  const charge={type:'valide',feuille:feuilleCourante,prenom:eleve.prenom,nom:eleve.nom,notes:nv.notes,max:nv.max,fautes:nv.fautes,dates:nv.dates,ids:nv.ids,date:nv.d};
   m.textContent='Envoi…';
   const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
     .then(()=>{ m.textContent='Notes enregistrées pour '+eleve.prenom+' '+eleve.nom+'.'; })
@@ -478,6 +492,7 @@ function demarrer(essai=false){
     partieCourante=0;
     questions=prendre((SCALAIRE?banqueScal:banque).filter(q=>!q.zero),1,0);
   }else{
+    feuilleCourante=feuillePour(SCALAIRE);
     idSerie='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); corrigees=new Set();
     partieCourante=lancerPartie();
     questions=SCALAIRE?prendre(banqueScal,NB_QUESTIONS,MAX_ZEROS):tirage(partieCourante>NB_PARTIES_SANS_SCALAIRE);
@@ -539,7 +554,7 @@ function terminer(){
 }
 function envoyer(total,fautes){
   if(!URL_ENVOI){ $('envoi').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; return; }
-  const charge={type:'serie',id:idSerie,feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,max:questions.length*POINTS_PAR_QUESTION,fautes,
+  const charge={type:'serie',id:idSerie,feuille:feuilleCourante,prenom:eleve.prenom,nom:eleve.nom,note:Math.round(total*100)/100,max:questions.length*POINTS_PAR_QUESTION,fautes,
     duree:Math.round(resultats.reduce((s,x)=>s+x.t,0)),date:new Date().toISOString(),
     detail:resultats.map((x,n)=>`Q${n+1} ${x.q.p}${x.q.i}${x.q.scal?'.':'^'}${x.q.q}${x.q.j} : ${x.ok?'OK':'faux'} ${Math.round(x.t*10)/10} s -> ${x.pts}`)};
   $('envoi').textContent='Envoi de ta note…';
@@ -551,28 +566,48 @@ function envoyer(total,fautes){
 
 function envoyerCorrection(){       // l'élève vient de retrouver une bonne réponse dans « Revoir mes erreurs »
   if(!URL_ENVOI) return;
-  const charge={type:'correction',id:idSerie,feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,fautes:nbFautesSerie,
+  const charge={type:'correction',id:idSerie,feuille:feuilleCourante,prenom:eleve.prenom,nom:eleve.nom,fautes:nbFautesSerie,
     corrigees:[...corrigees].sort((a,b)=>a-b).map(n=>n+1)};
   fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)}).catch(()=>{});
 }
 $('version').textContent=`Version ${VERSION} — ${VERSION_DATE}`; document.title+=' · v'+VERSION;
 construireChoix($('choix'),'g',majApercu); dessinerFigures();
 const MOTS={1:'un',2:'deux',3:'trois',4:'quatre',5:'cinq',6:'six',7:'sept',8:'huit',9:'neuf',10:'dix',12:'douze',15:'quinze',20:'vingt'};
-$('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits ${SCALAIRE?'scalaires':''} suivants.`.replace('  ',' ');
+function majExercice(){
+  SCALAIRE=document.querySelector('input[name="exo"]:checked').value==='scalaire';
+  try{ localStorage.setItem('exo',SCALAIRE?'scalaire':'vectoriel'); }catch(e){}
+  const titre=SCALAIRE?'Produits scalaires':'Produits vectoriels';
+  document.querySelector('h1').textContent=titre; document.title=titre+' · v'+VERSION;
+  $('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits ${SCALAIRE?'scalaires':'suivants'}${SCALAIRE?' suivants':''}.`.replace(/ +/g,' ');
+  majHistoriqueAccueil();
+}
+try{ if(localStorage.getItem('exo')==='scalaire') document.querySelector('input[name="exo"][value="scalaire"]').checked=true; }catch(e){}
+document.querySelectorAll('input[name="exo"]').forEach(e=>e.addEventListener('change',majExercice));
 if(CFG.essaiTest){ $('essai').classList.remove('hidden'); $('essai').onclick=()=>{ if(nomValide()) demarrer(true); }; }
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=$('essai').disabled=!nomValide(); majHistoriqueAccueil(); }));
 try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
 $('changer').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); $('prenom').focus(); };
+$('autreExo').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); };
+majExercice();
 $('valider').onclick=valider;
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!$('jeu').classList.contains('hidden')) valider(); });
 
 /* ======================= Page de réglage (ouvrir la page avec ?admin) ======================= */
 if(/[?&]admin\b/.test(location.search)){
   ['accueil','jeu','fin','eleve'].forEach(i=>$(i).classList.add('hidden')); document.querySelector('.panel').classList.add('hidden');
-  $('admin').classList.remove('hidden');
+  // Verrou : seule l'empreinte (PBKDF2-SHA-256) du mot de passe est dans le code, jamais le mot de passe. Pour le changer : ouvrir
+  // la page de réglage, section « Changer le mot de passe », puis remplacer la ligne MDP ci-dessous par celle qui est proposée.
+  // Limite : la page est publique et statique ; ce verrou empêche l'accès au formulaire, il ne protège pas les liens déjà fabriqués.
+  const MDP={sel:'2d86d680fd6966ec',iter:150000,hash:'7b06c073eb8308dc9d78030e353c1803651a29e57cb87f8c42ea2a0913e66b86'};
+  async function empreinte(mdp,sel,iter){
+    const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(mdp),'PBKDF2',false,['deriveBits']);
+    const b=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new TextEncoder().encode(sel),iterations:iter},k,256);
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  function ouvrirAdmin(){
+  $('verrou').classList.add('hidden'); $('admin').classList.remove('hidden');
   const CHAMPS=[
-    {k:'exercice',t:'e',l:'Type d\'exercice'},
     {k:'nbQuestions',t:'n',l:'Nombre de questions par série'},
     {k:'pointsParQuestion',t:'n',l:'Points d\'une question réussie (note maximale = questions × points)'},
     {k:'tempsPleinePoints',t:'n',l:'Temps (en secondes) pour avoir tous les points'},
@@ -592,11 +627,6 @@ if(/[?&]admin\b/.test(location.search)){
     const lab=document.createElement('label'); lab.textContent=c.l+' : '; lab.style.display='block';
     let el;
     if(c.t==='b'){ el=document.createElement('input'); el.type='checkbox'; el.checked=!!CFG[c.k]; lab.textContent=''; lab.append(el,' '+c.l); }
-    else if(c.t==='e'){
-      el=document.createElement('select');
-      [['vectoriel','Produits vectoriels (avec parfois 1 ou 2 produits scalaires)'],['scalaire','Produits scalaires uniquement (onglet « … scalaire » de la feuille)']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; el.appendChild(o); });
-      el.value=CFG[c.k]; lab.appendChild(el);
-    }
     else{
       el=document.createElement('input'); el.type=c.t==='s'?'text':'number';
       if(c.t!=='s'){ el.step=c.k==='plancher'?'0.05':'1'; const bo=c.t==='pct'?[0,100]:BORNES[c.k]; el.min=bo[0]; el.max=bo[1]; }
@@ -611,7 +641,7 @@ if(/[?&]admin\b/.test(location.search)){
     const o={};
     for(const c of CHAMPS){
       const [el,t]=saisies[c.k]; let v;
-      if(t==='b') v=el.checked; else if(t==='s'||t==='e') v=el.value.trim(); else{ v=parseFloat(String(el.value).replace(',','.')); if(!isFinite(v)) v=DEFAUTS[c.k]; if(t==='pct') v=1-Math.min(100,Math.max(0,v))/100; }
+      if(t==='b') v=el.checked; else if(t==='s') v=el.value.trim(); else{ v=parseFloat(String(el.value).replace(',','.')); if(!isFinite(v)) v=DEFAUTS[c.k]; if(t==='pct') v=1-Math.min(100,Math.max(0,v))/100; }
       if(v!==DEFAUTS[c.k]) o[c.k]=v;
     }
     return o;
@@ -627,6 +657,21 @@ if(/[?&]admin\b/.test(location.search)){
   $('adminCopier').onclick=()=>{ $('adminLien').select(); try{ navigator.clipboard.writeText($('adminLien').value); }catch(e){ document.execCommand('copy'); } };
   $('adminRaz').onclick=()=>{ location.hash=''; location.reload(); };
   majLien();
+  $('nouveauMdpOk').onclick=async()=>{
+    const m=$('nouveauMdp').value; if(m.length<8){ $('nouveauMdpSortie').value='Au moins 8 caractères.'; return; }
+    const sel=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>x.toString(16).padStart(2,'0')).join('');
+    $('nouveauMdpSortie').value=`const MDP={sel:'${sel}',iter:${MDP.iter},hash:'${await empreinte(m,sel,MDP.iter)}'};`;
+  };
+  }
+  if(!window.crypto||!crypto.subtle){ $('verrou').classList.remove('hidden'); $('verrouMsg').textContent='Ce navigateur ne permet pas la vérification du mot de passe (ouvrir la page en https).'; $('verrouForm').querySelector('button').disabled=true; }
+  else{
+    $('verrou').classList.remove('hidden'); $('verrouMdp').focus();
+    $('verrouForm').addEventListener('submit',async e=>{
+      e.preventDefault();
+      if(await empreinte($('verrouMdp').value,MDP.sel,MDP.iter)===MDP.hash) ouvrirAdmin();
+      else{ $('verrouMsg').textContent='Mot de passe incorrect.'; $('verrouMdp').value=''; }
+    });
+  }
 }
 </script>
 </body>
