@@ -106,6 +106,7 @@
       <div id="bilan" class="meta"></div>
     </div>
     <div id="histFin" class="meta center" style="margin-top:10px"></div>
+    <div id="valide" class="center" style="margin-top:10px"></div>
     <table id="tableau"></table>
     <div id="envoi" class="meta center"></div>
     <details id="erreurs"><summary>Revoir mes erreurs et proposer la bonne réponse</summary><div id="listeErreurs"></div></details>
@@ -412,11 +413,50 @@ function finirPartie(note,fautes,max){
 function htmlHistorique(cle){
   const h=lireHist(cle);
   if(h.length<NB_PARTIES_AVANT_HISTORIQUE) return '';
-  const dateCourte=iso=>new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
   return '<b>Tes trois dernières parties</b><br>'+h.slice(-3).reverse().map(e=>`${dateCourte(e.d)} — ${e.note===null?'non terminée':fmt(e.note)+' / '+(e.max||NB_QUESTIONS*POINTS_PAR_QUESTION)+(typeof e.fautes==='number'?' — '+(e.fautes===0?'aucune erreur':e.fautes+' erreur'+(e.fautes>1?'s':'')):'')}`).join('<br>');
 }
+// Notes mises de côté : l'élève choisit ses deux dernières parties terminées (consécutives) ; elles sont gardées à part
+// et ne changent que s'il en met deux autres de côté. Envoyées à la feuille (onglet « … validées », une ligne par élève, écrasée).
+const memValide={};
+const cleValide=cle=>'valide2:'+cle.slice(6);
+function lireValide(cle){
+  let v=memValide[cle];
+  try{ const t=localStorage.getItem(cleValide(cle)); if(t) v=JSON.parse(t); }catch(e){}
+  return v&&Array.isArray(v.notes)&&v.notes.length===2?v:null;
+}
+function ecrireValide(cle,v){ memValide[cle]=v; try{ localStorage.setItem(cleValide(cle),JSON.stringify(v)); }catch(e){} }
+function deuxDernieres(cle){ const h=lireHist(cle).slice(-2); return h.length===2&&h.every(e=>e.note!==null)?h:null; }
+const dateCourte=iso=>new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+function htmlValide(cle){
+  const v=lireValide(cle); if(!v) return '';
+  return `<b>Notes mises de côté</b><br>${fmt(v.notes[0])} et ${fmt(v.notes[1])} / ${v.max} (enregistrées le ${dateCourte(v.d)})`;
+}
+function majValide(){
+  const zone=$('valide'), p=deuxDernieres(cleCourante), v=lireValide(cleCourante);
+  let h='';
+  if(!p) h='<span class="meta">Pour mettre des notes de côté, il faut deux parties terminées d\'affilée.</span>';
+  else if(v&&v.ids[0]===p[0].id&&v.ids[1]===p[1].id) h='<span class="ok">✓ Ces deux notes sont mises de côté.</span>';
+  else h=`<button id="mettreDeCote">${v?'Remplacer mes notes mises de côté par mes deux dernières':'Mettre de côté mes deux dernières notes'} (${fmt(p[0].note)} et ${fmt(p[1].note)})</button>`;
+  zone.innerHTML=h+(v?'<div class="meta" style="margin-top:6px">'+htmlValide(cleCourante)+'</div>':'')+'<div id="envoiValide" class="meta"></div>';
+  const b=$('mettreDeCote'); if(b) b.onclick=()=>{
+    const max=Math.max(p[0].max||0,p[1].max||0)||NB_QUESTIONS*POINTS_PAR_QUESTION;
+    const nv={d:new Date().toISOString(),ids:[p[0].id,p[1].id],notes:[p[0].note,p[1].note],dates:[p[0].d,p[1].d],fautes:[p[0].fautes,p[1].fautes],max};
+    ecrireValide(cleCourante,nv); majValide(); envoyerValide(nv);
+  };
+}
+function envoyerValide(nv){
+  const m=$('envoiValide'); if(!URL_ENVOI||!m) return;
+  const charge={type:'valide',feuille:FEUILLE_RESULTATS,prenom:eleve.prenom,nom:eleve.nom,notes:nv.notes,max:nv.max,fautes:nv.fautes,dates:nv.dates,ids:nv.ids,date:nv.d};
+  m.textContent='Envoi…';
+  const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
+    .then(()=>{ m.textContent='Notes enregistrées pour '+eleve.prenom+' '+eleve.nom+'.'; })
+    .catch(()=>{ m.innerHTML='Envoi impossible (connexion ?). <button id="reenvoiValide">Réessayer</button>'; $('reenvoiValide').onclick=essai; });
+  essai();
+}
 function majHistoriqueAccueil(){
-  $('histAccueil').innerHTML=nomValide()?htmlHistorique(cleHist(propre($('prenom').value),propre($('nom').value))):'';
+  const cle=nomValide()?cleHist(propre($('prenom').value),propre($('nom').value)):'';
+  const a=cle?htmlHistorique(cle):'', b=cle?htmlValide(cle):'';
+  $('histAccueil').innerHTML=a+(a&&b?'<br><br>':'')+b;
 }
 function demarrer(essai=false){
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
@@ -456,11 +496,11 @@ function terminer(){
   if(modeEssai){
     $('note').textContent=fautes===0?'✓ Bonne réponse':'✗ Pas tout à fait';
     $('bilan').textContent="Calcul d'essai : il ne compte pas dans ta note.";
-    $('histFin').innerHTML='';
+    $('histFin').innerHTML=''; $('valide').innerHTML='';
   }else{
     finirPartie(Math.round(total*100)/100,fautes,maxPoints);
     $('note').textContent=`${fmt(total)} / ${maxPoints}`;
-    $('histFin').innerHTML=htmlHistorique(cleCourante);
+    $('histFin').innerHTML=htmlHistorique(cleCourante); majValide();
     $('bilan').textContent=fautes===0?'Aucune erreur !':`${fautes} erreur${fautes>1?'s':''} sur ${questions.length} questions.`;
   }
   let h='<tr><th>Question</th><th>énoncé</th><th></th><th>temps (s)</th><th>note</th></tr>';
