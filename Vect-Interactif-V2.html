@@ -134,7 +134,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.9', VERSION_DATE='20/11/2026';
+const VERSION='2.11', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -142,7 +142,8 @@ const VERSION='2.9', VERSION_DATE='20/11/2026';
 const DEFAUTS = {
   nbQuestions: 10,                 // questions par série
   pointsParQuestion: 2,            // points d'une question réussie rapidement (10 questions -> 20 points)
-  tempsPleinePoints: 10,           // secondes pour avoir tous les points
+  tempsPleinePoints: 10,           // secondes pour avoir tous les points (produit vectoriel)
+  tempsPleinePointsScalaire: 8,    // idem pour l'exercice « produits scalaires » (plus rapide à faire)
   plancher: 0.75,                  // points minimum d'une bonne réponse, même très lente
   probaSansScalaire: 0.6,          // probabilité qu'une série ne contienne aucun produit scalaire
   nbPartiesSansScalaire: 3,        // les N premières parties d'un élève (sur ce navigateur) sans produit scalaire
@@ -156,7 +157,7 @@ const DEFAUTS = {
   urlEnvoi: 'https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec',
   angleDessin: 25                  // angle (°) utilisé sur les figures
 };
-const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],plancher:[0,10],probaSansScalaire:[0,1],
+const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],tempsPleinePointsScalaire:[2,120],plancher:[0,10],probaSansScalaire:[0,1],
   nbPartiesSansScalaire:[0,20],maxZeros:[0,5],nbPartiesAvantHistorique:[1,20],angleDessin:[5,60]};
 const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'];
 function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<json encodé en base64>
@@ -187,8 +188,8 @@ let SCALAIRE=false, feuilleCourante=feuillePour(false);
 // Valeur d'une BONNE réponse selon le temps t (en s) : tous les points jusqu'à T secondes, puis P·√(T/t)
 // arrondi vers le bas au huitième de P (quart de point pour P=2), avec un plancher.
 // Cohérent avec l'outil d'origine : 9→2 ; 10→2 ; 11→1,75 ; 13→1,75 ; 15→1,5 ; 20→1,25 ; ≥40→0,75.
-function pointsPour(t){
-  const P=CFG.pointsParQuestion, T=CFG.tempsPleinePoints, pas=P/8;
+function pointsPour(t){      // le temps dépend de l'EXERCICE choisi (un produit scalaire tiré dans une série vectorielle garde le temps vectoriel)
+  const P=CFG.pointsParQuestion, T=SCALAIRE?CFG.tempsPleinePointsScalaire:CFG.tempsPleinePoints, pas=P/8;
   if(t<=T) return P;
   const palier=Math.ceil(P*Math.sqrt(T/t)/pas-1e-9)*pas-pas;
   return Math.max(Math.min(CFG.plancher,P),Math.min(P,palier));
@@ -615,7 +616,8 @@ if(/[?&]admin\b/.test(location.search)){
   const CHAMPS=[
     {k:'nbQuestions',t:'n',l:'Nombre de questions par série'},
     {k:'pointsParQuestion',t:'n',l:'Points d\'une question réussie (note maximale = questions × points)'},
-    {k:'tempsPleinePoints',t:'n',l:'Temps (en secondes) pour avoir tous les points'},
+    {k:'tempsPleinePoints',t:'n',l:'Temps (en secondes) pour avoir tous les points — exercice vectoriel'},
+    {k:'tempsPleinePointsScalaire',t:'n',l:'Temps (en secondes) pour avoir tous les points — exercice scalaire'},
     {k:'plancher',t:'n',l:'Points minimum d\'une bonne réponse très lente'},
     {k:'probaSansScalaire',t:'pct',l:'Part des séries qui contiennent des produits scalaires (%)'},
     {k:'nbPartiesSansScalaire',t:'n',l:'Nombre de premières parties sans produit scalaire'},
