@@ -48,9 +48,9 @@
   /* page de correction : les figures restent visibles en haut de l'écran pendant le défilement */
   body.revue .panel{position:sticky;top:0;z-index:10;background:var(--bg);margin-top:0;padding:6px 0;box-shadow:0 6px 8px -6px rgba(0,0,0,.25)}
   .hidden{display:none}
-  .discret{margin-top:48px}
-  .discret button{background:none;border:none;padding:2px 6px;font-size:.72rem;color:var(--muted);opacity:.45;text-decoration:underline;cursor:pointer}
-  .discret button:hover{opacity:.9}
+  .discret{margin-top:72px}
+  .discret button{background:none;border:none;padding:2px 6px;font-size:.65rem;color:var(--muted);opacity:.22;text-decoration:underline;cursor:pointer}
+  .discret button:hover{opacity:.8}
   .intro{max-width:640px;margin:0 auto;text-align:center}
   .intro p{color:var(--muted)}
   .center{text-align:center}
@@ -93,7 +93,7 @@
   <section id="accueil" class="intro">
     <p id="consigne"></p>
     <form id="identite" autocomplete="off">
-      <p id="nomMemorise" class="center hidden">Élève : <b id="nomMemoriseTexte"></b> <span class="discret" style="margin:0"><button type="button" id="changer2" title="Corriger le nom ou changer d'élève">erreur de nom ?</button></span></p>
+      <p id="nomMemorise" class="center hidden">Élève : <b id="nomMemoriseTexte"></b></p>
       <p id="saisieNom"><input type="text" id="prenom" placeholder="Prénom" autocomplete="given-name">
          <input type="text" id="nom" placeholder="NOM" autocomplete="family-name"></p>
       <p id="choixExo" class="center" style="margin:6px 0">
@@ -136,7 +136,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.14', VERSION_DATE='20/11/2026';
+const VERSION='2.15', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -633,7 +633,6 @@ function afficherNom(){
   if(memo) $('nomMemoriseTexte').textContent=`${propre($('prenom').value)} ${propre($('nom').value).toUpperCase()}`;
 }
 function ouvrirSaisieNom(){ saisieNomOuverte=true; afficherNom(); $('prenom').focus(); }
-$('changer2').onclick=ouvrirSaisieNom;
 try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} afficherNom(); majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
 $('changer').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); ouvrirSaisieNom(); };
 $('autreExo').onclick=()=>{ document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); afficherNom(); };
