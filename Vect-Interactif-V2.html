@@ -134,7 +134,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.8', VERSION_DATE='20/11/2026';
+const VERSION='2.9', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -151,7 +151,7 @@ const DEFAUTS = {
   nbPartiesAvantHistorique: 3,     // à partir de N parties lancées, l'élève voit ses 3 dernières notes
   essaiTest: true,                 // bouton « Essai : un seul calcul » sur l'accueil
   consigne: '',                    // texte d'accueil ; vide = « Lancer une série de N calculs. Évaluer les produits suivants. »
-  feuille: 'Notes V2',             // début du nom des onglets de notes : « Notes V2 vectorielle » et « Notes V2 scalaire » (à autoriser dans le script)
+  feuille: 'Notes V2',             // début du nom des onglets de notes : « Notes V2 vec » et « Notes V2 sca » (à autoriser dans le script)
   // Adresse du script Google Apps Script (laisser vide pour ne rien enregistrer)
   urlEnvoi: 'https://script.google.com/macros/s/AKfycbxJYM_rYFnK-Gd6Gy0DIvPPAaTH7inHBcVaTsIEQQK5NffpXstxtlsuCKN4_sMHa6ca/exec',
   angleDessin: 25                  // angle (°) utilisé sur les figures
@@ -181,8 +181,8 @@ const NB_QUESTIONS=CFG.nbQuestions, POINTS_PAR_QUESTION=CFG.pointsParQuestion, N
       PROBA_SANS_SCALAIRE=CFG.probaSansScalaire, MAX_ZEROS=CFG.maxZeros, URL_ENVOI=CFG.urlEnvoi,
       ANGLE_DESSIN=CFG.angleDessin;
 // L'élève choisit sur l'accueil entre l'exercice « produits vectoriels » (avec parfois un produit scalaire) et l'exercice
-// « produits scalaires ». Chacun a son onglet de notes (« Notes V2 vectorielle » / « Notes V2 scalaire »), son historique et ses notes mises de côté.
-const feuillePour=sc=>CFG.feuille+(sc?' scalaire':' vectorielle');
+// « produits scalaires ». Chacun a son onglet de notes (« Notes V2 vec » / « Notes V2 sca »), son historique et ses notes mises de côté.
+const feuillePour=sc=>CFG.feuille+(sc?' sca':' vec');
 let SCALAIRE=false, feuilleCourante=feuillePour(false);
 // Valeur d'une BONNE réponse selon le temps t (en s) : tous les points jusqu'à T secondes, puis P·√(T/t)
 // arrondi vers le bas au huitième de P (quart de point pour P=2), avec un plancher.
@@ -623,7 +623,7 @@ if(/[?&]admin\b/.test(location.search)){
     {k:'nbPartiesAvantHistorique',t:'n',l:'Afficher les 3 dernières notes à partir de la partie n°'},
     {k:'essaiTest',t:'b',l:'Proposer un « essai : un seul calcul »'},
     {k:'consigne',t:'s',l:'Texte d\'accueil (vide = texte automatique)'},
-    {k:'feuille',t:'s',l:'Début du nom des onglets de notes (« … vectorielle » et « … scalaire » sont ajoutés ; à autoriser dans le script)'},
+    {k:'feuille',t:'s',l:'Début du nom des onglets de notes (« … vec » et « … sca » sont ajoutés ; à autoriser dans le script)'},
     {k:'urlEnvoi',t:'s',l:'Adresse du script Google (vide = aucun enregistrement)'}
   ];
   const zone=$('adminChamps'); const saisies={};
