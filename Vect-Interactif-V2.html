@@ -103,6 +103,7 @@
          <button type="button" id="essai" class="hidden" disabled>Essai : un seul calcul</button></p>
     </form>
     <div id="histAccueil" class="meta" style="margin-top:14px"></div>
+    <div id="rangAccueil" class="meta" style="margin-top:6px"></div>
   </section>
 
   <!-- Question -->
@@ -134,7 +135,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='2.11', VERSION_DATE='20/11/2026';
+const VERSION='2.13', VERSION_DATE='20/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -150,6 +151,8 @@ const DEFAUTS = {
   maxZeros: 2,                     // au plus N questions dont la réponse est le vecteur nul
   cacherChronoPremierePartie: true,// 1re partie : chronomètre masqué (le temps compte quand même)
   nbPartiesAvantHistorique: 3,     // à partir de N parties lancées, l'élève voit ses 3 dernières notes
+  seulementSansErreur: true,       // on ne peut mettre de côté que deux parties d'affilée SANS AUCUNE ERREUR
+  afficherClassement: true,        // l'élève voit son rang parmi les notes mises de côté (sans aucun nom)
   essaiTest: true,                 // bouton « Essai : un seul calcul » sur l'accueil
   consigne: '',                    // texte d'accueil ; vide = « Lancer une série de N calculs. Évaluer les produits suivants. »
   feuille: 'Notes V2',             // début du nom des onglets de notes : « Notes V2 vec » et « Notes V2 sca » (à autoriser dans le script)
@@ -159,7 +162,7 @@ const DEFAUTS = {
 };
 const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],tempsPleinePointsScalaire:[2,120],plancher:[0,10],probaSansScalaire:[0,1],
   nbPartiesSansScalaire:[0,20],maxZeros:[0,5],nbPartiesAvantHistorique:[1,20],angleDessin:[5,60]};
-const CLES_BOOL=['cacherChronoPremierePartie','essaiTest'], CLES_TEXTE=['consigne','feuille','urlEnvoi'];
+const CLES_BOOL=['cacherChronoPremierePartie','essaiTest','afficherClassement','seulementSansErreur'], CLES_TEXTE=['consigne','feuille','urlEnvoi'];
 function lireConfigUrl(){          // réglages portés par le lien : ...#cfg=<json encodé en base64>
   try{
     const m=location.hash.match(/cfg=([^&]+)/); if(!m) return {};
@@ -460,17 +463,44 @@ function htmlValide(cle){
   const v=lireValide(cle); if(!v) return '';
   return `<b>Notes mises de côté</b><br>${fmt(v.notes[0])} et ${fmt(v.notes[1])} / ${v.max} (enregistrées le ${dateCourte(v.d)})`;
 }
-function majValide(){
+// Classement : rang de l'élève d'après le MINIMUM de ses deux notes mises de côté, parmi tous les élèves de l'exercice (le script ne renvoie
+// ni nom ni note des autres). Les ex æquo ont le même rang. Rien n'est affiché si la lecture échoue ou si l'élève n'a rien mis de côté.
+let jetonRang=0;
+async function chercherRang(feuille,prenom,nom){
+  if(!CFG.afficherClassement||!URL_ENVOI) return null;
+  try{
+    const u=`${URL_ENVOI}?action=rang&feuille=${encodeURIComponent(feuille)}&prenom=${encodeURIComponent(prenom)}&nom=${encodeURIComponent(nom)}`;
+    const o=await (await fetch(u)).json();
+    return o&&typeof o.rang==='number'&&typeof o.total==='number'?o:null;
+  }catch(e){ return null; }
+}
+const htmlRang=o=>`<b>Classement</b> : ${o.rang}${o.rang===1?'er':'e'} sur ${o.total} élève${o.total>1?'s':''} (d'après le minimum de tes deux notes mises de côté)`;
+async function majRang(cible,feuille,prenom,nom){
+  const moi=++jetonRang; $(cible).textContent='';
+  const o=await chercherRang(feuille,prenom,nom);
+  if(o&&moi===jetonRang) $(cible).innerHTML=htmlRang(o);
+}
+function majRangFin(){ if($('rangFin')&&lireValide(cleCourante)) majRang('rangFin',feuilleCourante,eleve.prenom,eleve.nom); }
+function majRangAccueil(){
+  $('rangAccueil').textContent='';
+  if(!nomValide()) return;
+  const prenom=propre($('prenom').value), nom=propre($('nom').value);
+  if(lireValide(cleHist(prenom,nom))) majRang('rangAccueil',feuillePour(SCALAIRE),prenom,nom);
+}
+function majValide(avecRang=true){
   const zone=$('valide'), p=deuxDernieres(cleCourante), v=lireValide(cleCourante);
   let h='';
+  const sansErreur=p&&p.every(e=>e.fautes===0);
   if(!p) h='<span class="meta">Pour mettre des notes de côté, il faut deux parties terminées d\'affilée.</span>';
+  else if(CFG.seulementSansErreur&&!sansErreur) h='<span class="meta">Pour mettre des notes de côté, il faut deux parties d\'affilée sans aucune erreur.</span>';
   else if(v&&v.ids[0]===p[0].id&&v.ids[1]===p[1].id) h='<span class="ok">✓ Ces deux notes sont mises de côté.</span>';
   else h=`<button id="mettreDeCote">${v?'Remplacer mes notes mises de côté par mes deux dernières':'Mettre de côté mes deux dernières notes'} (${fmt(p[0].note)} et ${fmt(p[1].note)})</button>`;
-  zone.innerHTML=h+(v?'<div class="meta" style="margin-top:6px">'+htmlValide(cleCourante)+'</div>':'')+'<div id="envoiValide" class="meta"></div>';
+  zone.innerHTML=h+(v?'<div class="meta" style="margin-top:6px">'+htmlValide(cleCourante)+'</div>':'')+'<div id="envoiValide" class="meta"></div><div id="rangFin" class="meta" style="margin-top:6px"></div>';
+  if(avecRang) majRangFin();
   const b=$('mettreDeCote'); if(b) b.onclick=()=>{
     const max=Math.max(p[0].max||0,p[1].max||0)||NB_QUESTIONS*POINTS_PAR_QUESTION;
     const nv={d:new Date().toISOString(),ids:[p[0].id,p[1].id],notes:[p[0].note,p[1].note],dates:[p[0].d,p[1].d],fautes:[p[0].fautes,p[1].fautes],max};
-    ecrireValide(cleCourante,nv); majValide(); envoyerValide(nv);
+    ecrireValide(cleCourante,nv); majValide(false); envoyerValide(nv);
   };
 }
 function envoyerValide(nv){
@@ -478,7 +508,7 @@ function envoyerValide(nv){
   const charge={type:'valide',feuille:feuilleCourante,prenom:eleve.prenom,nom:eleve.nom,notes:nv.notes,max:nv.max,fautes:nv.fautes,dates:nv.dates,ids:nv.ids,date:nv.d};
   m.textContent='Envoi…';
   const essai=()=>fetch(URL_ENVOI,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(charge)})
-    .then(()=>{ m.textContent='Notes enregistrées pour '+eleve.prenom+' '+eleve.nom+'.'; })
+    .then(()=>{ m.textContent='Notes enregistrées pour '+eleve.prenom+' '+eleve.nom+'.'; majRangFin(); })
     .catch(()=>{ m.innerHTML='Envoi impossible (connexion ?). <button id="reenvoiValide">Réessayer</button>'; $('reenvoiValide').onclick=essai; });
   essai();
 }
@@ -585,10 +615,11 @@ function majExercice(){
   construireChoix($('choix'),'g',majApercu);
   document.querySelector('h1').textContent=titre; document.title=titre+' · v'+VERSION;
   $('consigne').textContent=CFG.consigne||`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits ${SCALAIRE?'scalaires':'suivants'}${SCALAIRE?' suivants':''}.`.replace(/ +/g,' ');
-  majHistoriqueAccueil();
+  majHistoriqueAccueil(); majRangAccueil();
 }
 try{ if(localStorage.getItem('exo')==='scalaire') document.querySelector('input[name="exo"][value="scalaire"]').checked=true; }catch(e){}
 document.querySelectorAll('input[name="exo"]').forEach(e=>e.addEventListener('change',majExercice));
+['prenom','nom'].forEach(id=>$(id).addEventListener('change',majRangAccueil));
 if(CFG.essaiTest){ $('essai').classList.remove('hidden'); $('essai').onclick=()=>{ if(nomValide()) demarrer(true); }; }
 $('identite').addEventListener('submit',e=>{e.preventDefault(); if(nomValide()) demarrer();});
 ['prenom','nom'].forEach(id=>$(id).addEventListener('input',()=>{ $('demarrer').disabled=$('essai').disabled=!nomValide(); majHistoriqueAccueil(); }));
@@ -623,6 +654,8 @@ if(/[?&]admin\b/.test(location.search)){
     {k:'nbPartiesSansScalaire',t:'n',l:'Nombre de premières parties sans produit scalaire'},
     {k:'cacherChronoPremierePartie',t:'b',l:'Cacher le chronomètre pendant la première partie'},
     {k:'nbPartiesAvantHistorique',t:'n',l:'Afficher les 3 dernières notes à partir de la partie n°'},
+    {k:'seulementSansErreur',t:'b',l:'Ne permettre de mettre de côté que des parties sans aucune erreur'},
+    {k:'afficherClassement',t:'b',l:'Afficher à l\'élève son rang parmi les notes mises de côté (sans nom)'},
     {k:'essaiTest',t:'b',l:'Proposer un « essai : un seul calcul »'},
     {k:'consigne',t:'s',l:'Texte d\'accueil (vide = texte automatique)'},
     {k:'feuille',t:'s',l:'Début du nom des onglets de notes (« … vec » et « … sca » sont ajoutés ; à autoriser dans le script)'},
