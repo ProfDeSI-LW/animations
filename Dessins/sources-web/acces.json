@@ -1,0 +1,8 @@
+{
+  "_aide": "Verrou des fiches par mot de passe. Mettre actif à true puis relancer « python3 build.py ». Chaque groupe liste ses fiches (nom du fichier sans extension, fiche13 couvre 13 A et 13 B) et son mot de passe. Les mots de passe ne sont pas recopiés dans le site (seule leur empreinte SHA-256 l'est). Verrou léger : il bloque la navigation (sommaire, flèches, ouverture directe d'une page), mais un élève qui lit le code source d'une page peut retrouver le dessin.",
+  "actif": false,
+  "groupes": [
+    {"nom": "Fiches 11 à 15", "fiches": ["fiche11", "fiche12", "fiche13", "fiche14", "fiche15"], "mot_de_passe": "a-changer-1"},
+    {"nom": "Fiches 16 à 20", "fiches": ["fiche16", "fiche17", "fiche18", "fiche19", "fiche20"], "mot_de_passe": "a-changer-2"}
+  ]
+}
