@@ -1,0 +1,414 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Camion benne interactif</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=STIX+Two+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+/* Plan : projection orthographique réglable ; la vue par défaut est celle de la figure TikZ du TD (vue isométrique : azimut 45°, élévation 35,26°).
+   Palette : encre, gris du plateau, rouge / bleu / vert des repères R1, R2, R3, orange pour la trace de D. */
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --ink:#1d2330; --muted:#5d6678; --line:#d5d9e2;
+  --plateau:#8f97a6; --red:#b3141b; --blue:#1a2bb8; --green:#0a7a2f; --accent:#1a2bb8; --trace:#c26a00; --ang:#7b2fbf;
+  --font-ui:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-math:"STIX Two Text","Latin Modern Roman","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+    --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+  --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.nv{display:flex;align-items:center;gap:3px;min-width:0}
+.nv i{font-style:normal;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.row input.num{width:100%;min-width:0;font:inherit;font-size:.85rem;color:var(--ink);padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);text-align:right;-moz-appearance:textfield}
+.row input.num::-webkit-inner-spin-button,.row input.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+.dims{border-top:1px solid var(--line);padding-top:8px}
+.dims summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+.dim{display:grid;grid-template-columns:7.2em minmax(0,1fr) 3.4em;gap:8px;align-items:center;margin-top:6px;font-size:.88rem}
+.dim label{font-family:var(--font-math);font-style:italic}
+.dim output{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.dim input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.dims .lnk{margin-top:8px}
+
+[hidden]{display:none !important}
+.lnk{border:0;background:none;padding:0;color:var(--muted);font-size:.8rem;text-decoration:underline;cursor:pointer}
+.codeline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.codeline input{font:inherit;font-size:.85rem;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:8.5rem}
+.codeline button:not(.lnk){padding:2px 9px;font-size:.85rem}
+
+html{font-size:calc(16px * var(--z,1))}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:.94rem;line-height:1.45;
+  padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.3rem;font-weight:600;margin:0;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.zoom{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem}
+.zoom button{min-width:2.1rem;height:2.1rem;padding:0 6px}
+.info{font-size:.75rem;color:var(--muted)}
+.sub{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 20rem;gap:14px;align-items:start}
+@media (max-width:780px){.layout{grid-template-columns:minmax(0,1fr)}}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;position:relative}
+svg{display:block;width:100%;height:auto;max-height:80vh;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+svg.drag{cursor:grabbing}
+.hint{position:absolute;left:14px;bottom:10px;font-size:.8rem;color:var(--muted);pointer-events:none}
+.ctrl{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grp{display:flex;flex-direction:column;gap:4px}
+.row{display:grid;grid-template-columns:1.5em 1.9rem minmax(0,1fr) 1.9rem 1.9rem 8.2ch;gap:4px;align-items:center}
+.row label{font-family:var(--font-math);font-size:1.15rem;font-style:italic}
+.row output{font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.row.v label{font-size:1rem;color:var(--muted)}
+.row.v output{color:var(--muted);font-size:.88rem}
+.row button{padding:0;height:1.9rem;width:1.9rem;line-height:1;font-size:1.05rem}
+.cap{font-size:.82rem;color:var(--muted);margin-top:2px}
+.sep{border:0;border-top:1px solid var(--line);margin:0}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.main{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.line2{display:flex;gap:18px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.read{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.read b{color:var(--ink);font-weight:600}
+.num{font-variant-numeric:tabular-nums;color:var(--ink)}
+svg text{font-family:var(--font-math);fill:var(--ink)}
+/* Mode « téléphone / tablette tactile » : écran étroit OU écran tactile sans survol (la résolution seule ne suffit pas) */
+@media (max-width:780px), (hover:none) and (pointer:coarse){
+  body{padding-block:8px;-webkit-text-size-adjust:100%}
+  main{gap:8px}
+  h1{font-size:1.1rem}.sub{display:none}
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .fig{position:sticky;top:6px;z-index:5;padding:2px}
+  svg{max-height:44vh}
+  .hint{display:none}
+  .row{grid-template-columns:1.4em 2.4rem minmax(0,1fr) 2.4rem 2.4rem 8.6ch}
+  .row button{height:2.4rem;width:2.4rem;font-size:1.2rem}
+  .row input[type=range]{height:1.9rem}
+  .actions button{min-height:2.5rem;padding:6px 12px}
+  .zoom button{min-width:2.5rem;height:2.5rem}
+  .opts label{min-height:2.2rem}
+  .ctrl{padding:10px;gap:10px}
+}
+/* téléphone en paysage : figure fixe à gauche, réglages à droite */
+@media (hover:none) and (pointer:coarse) and (orientation:landscape), (max-height:520px) and (orientation:landscape){
+  .layout{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
+  svg{max-height:calc(100vh - 28px)}
+}
+.figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+.figtools button{padding:3px 9px;font-size:.85rem}
+#fsplay{display:none}
+.tcount{position:absolute;right:12px;bottom:8px;font-size:.8rem;color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
+.fig.fs{position:fixed;inset:0;z-index:100;border-radius:0;border:0;padding:0;display:flex}
+.fig.fs svg{width:100%;height:100%;max-height:none}
+.fig.fs #fsplay{display:inline-block}
+.fig.fs .hint{display:block}
+</style>
+
+<main>
+  <div class="top">
+   <div>
+    <h1>Camion benne : paramétrage α, λ</h1>
+    <p class="sub">Mêmes notations que dans le TD. Réglez l'angle α et la longueur λ, leurs vitesses, lancez le mouvement et laissez la trace de B se dessiner.</p>
+   </div>
+   <div class="zoom" role="group" aria-label="Taille de l'affichage">Taille <button id="zm" aria-label="Réduire l'affichage">A−</button><button id="zp" aria-label="Agrandir l'affichage">A+</button><button id="za" aria-label="Taille automatique" title="Taille automatique">auto</button></div>
+  </div>
+  <div class="layout">
+    <div class="fig">
+      <div class="figtools"><button id="fsplay" type="button">Lancer</button><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
+      <div class="tcount" id="tcount" aria-live="off"></div>
+            <svg id="fig" viewBox="0 0 640 560" role="img" aria-label="Schéma du vérin du camion benne : châssis 0, corps 1 et tige 2 dans le plan"></svg>
+    </div>
+    <div class="ctrl">
+      <div class="grp">
+        <div class="row"><label for="al">α</label><button data-k="al" data-d="-1" aria-label="Diminuer α">−</button><input id="al" type="range" min="0" max="359" step="1" value="125"><button data-k="al" data-d="1" aria-label="Augmenter α">+</button><button data-k="al" data-d="reset" aria-label="Valeur de départ de α">0</button><output id="alv"></output></div>
+        <div class="row v"><label for="val">α̇</label><button data-k="val" data-d="-5" aria-label="Diminuer la vitesse">−</button><input id="val" type="range" min="-180" max="180" step="5" value="20"><button data-k="val" data-d="5" aria-label="Augmenter la vitesse">+</button><button data-k="val" data-d="0" aria-label="Vitesse nulle">0</button><span class="nv"><input class="num" id="valn" type="number" step="any" inputmode="decimal" aria-label="Vitesse, valeur exacte"><i>°/s</i></span></div>
+        <div class="cap">corps 1 / châssis 0, axe (O, z)</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="la">λ</label><button data-k="la" data-d="-0.1" aria-label="Diminuer λ">−</button><input id="la" type="range" min="4.0" max="6.0" step="0.05" value="4.8"><button data-k="la" data-d="0.1" aria-label="Augmenter λ">+</button><button data-k="la" data-d="reset" aria-label="Valeur de départ de λ">↺</button><output id="lav"></output></div>
+        <div class="row v"><label for="vla">λ̇</label><button data-k="vla" data-d="-0.1" aria-label="Diminuer la vitesse">−</button><input id="vla" type="range" min="-1.5" max="1.5" step="0.1" value="0.5"><button data-k="vla" data-d="0.1" aria-label="Augmenter la vitesse">+</button><button data-k="vla" data-d="0" aria-label="Vitesse nulle">0</button><span class="nv"><input class="num" id="vlan" type="number" step="any" inputmode="decimal" aria-label="Vitesse, valeur exacte"><i>/s</i></span></div>
+        <div class="cap">OB = λ x₁, tige 2 / corps 1 (unité du dessin)</div>
+      </div>
+      <div class="actions"><button id="play" class="main" aria-pressed="false">Lancer</button></div>
+      <hr class="sep">
+      <div class="opts">
+        <label><input id="oAng" type="checkbox"> Mettre en évidence l'angle</label>
+        <label><input id="oFull" type="checkbox"> Afficher les bases au complet</label>
+        <label><input id="oHide" type="checkbox"> Masquer les vecteurs de base</label>
+        <label><input id="oTr" type="checkbox" checked> Laisser la trace de B</label>
+        <label id="lV" hidden><input id="oV" type="checkbox"> Afficher les vitesses de B</label>
+        <div class="line2"><label><input id="oTint" type="checkbox"> Solides colorés</label><label><input id="oCont" type="checkbox"> Contours colorés</label></div>
+      </div>
+      <div class="actions"><button id="clr">Effacer la trace</button><button id="rst">Valeurs de la figure</button><button id="zero">Tout remettre à zéro</button></div>
+      <details class="dims"><summary>Dimensions des pièces</summary><div class="dim"><label for="d_c">corps du vérin</label><input id="d_c" type="range"><output id="d_cv"></output></div><div class="dim"><label for="d_t">tige</label><input id="d_t" type="range"><output id="d_tv"></output></div><div class="dim"><label for="d_m">λ minimal</label><input id="d_m" type="range"><output id="d_mv"></output></div><div class="dim"><label for="d_M">λ maximal</label><input id="d_M" type="range"><output id="d_Mv"></output></div><div class="dim"><label for="d_n">trace (points)</label><input id="d_n" type="range"><output id="d_nv"></output></div><button id="dreset" class="lnk">Dimensions initiales</button></details>
+      <div class="read" id="rd"></div>
+    </div>
+  </div>
+  <div class="codeline"><button id="cbtn" class="lnk">Code enseignant</button><span id="cbox" hidden><input id="cin" type="password" placeholder="code" autocomplete="off" aria-label="Code enseignant"> <button id="cok">OK</button></span><button id="clock" class="lnk" hidden>Verrouiller</button></div>
+  <div class="info" id="info"></div>
+</main>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg", rad=Math.PI/180;
+  var svg=document.getElementById("fig");
+  var U=40, OX=320, OY=285, LS=1, LMIN=4.0, LMAX=6.0, LT=3.2, LC=2.45;   // échelle, origine à l'écran, bornes de λ, longueur de la tige
+  var st={al:125,la:4.8}, sp={al:20,la:0.5}, trace=[], playing=false, angles=false, full=false, showV=false, hideB=false, tracing=true, tint=false, contour=false;
+  var cs=function(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();};
+  function norm(v){return ((v%360)+360)%360;}
+  function f2(v){return v.toFixed(2).replace(".",",");}
+  function P(x,y){return [OX+U*x,OY-U*y];}
+  function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+  function pol(r,deg){return [r*Math.cos(deg*rad),r*Math.sin(deg*rad)];}
+  function ad(a,b,k){k=k===undefined?1:k;return [a[0]+k*b[0],a[1]+k*b[1]];}
+  function norm(v){return ((v%360)+360)%360;}
+  function head(q,ux,uy,color,g,h){h=h||9;
+    el("path",{d:"M"+q[0]+","+q[1]+"L"+(q[0]-ux*h-uy*h*0.38)+","+(q[1]-uy*h+ux*h*0.38)+"L"+(q[0]-ux*h*0.65)+","+(q[1]-uy*h*0.65)+"L"+(q[0]-ux*h+uy*h*0.38)+","+(q[1]-uy*h-ux*h*0.38)+"Z",fill:color},g);}
+  function arrow(p,q,color,w,g,dash){
+    var a=P(p[0],p[1]),b=P(q[0],q[1]),dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);if(L<2)return;var ux=dx/L,uy=dy/L;
+    var l=el("line",{x1:a[0],y1:a[1],x2:b[0]-ux*5.5,y2:b[1]-uy*5.5,stroke:color,"stroke-width":w},g);if(dash)l.setAttribute("stroke-dasharray","6 4");
+    head(b,ux,uy,color,g);
+  }
+  // étiquette : une flèche par vecteur, sur le nom complet (comme \vv{x_1}) ; parts = [[lettre, indice, couleur?] | "="]
+  function vlabel(parts,x,y,color0,anchor,g){
+    var gg=el("g",{},g),items=[],cur=0;
+    parts.forEach(function(p){
+      var color=(p!=="="&&p[2])?p[2]:color0;
+      var t=el("text",{x:0,y:y,"font-size":19*LS},gg);t.style.fill=color;
+      if(p==="="){t.textContent="=";}
+      else{var a=el("tspan",{"font-style":"italic"},t);a.textContent=p[0];
+        if(p[1]){var b=el("tspan",{"font-size":13*LS,dy:5*LS},t);b.textContent=p[1];}}
+      var w=t.getBBox().width,gap=(p==="=")?5:0;items.push({t:t,w:w,x:cur+gap,eq:p==="=",c:color});cur+=w+gap*2;
+    });
+    var off=anchor==="end"?-cur:anchor==="middle"?-cur/2:0;
+    items.forEach(function(it){it.t.setAttribute("x",x+off+it.x);
+      if(!it.eq){var x0=x+off+it.x,x1=x0+it.w,ya=y-15*LS,hd=4.5*LS,hw=3.2*LS;
+        el("path",{d:"M"+x0+","+ya+"H"+x1+"M"+(x1-hd)+","+(ya-hw)+"L"+x1+","+ya+"L"+(x1-hd)+","+(ya+hw),stroke:it.c,"stroke-width":1.2,fill:"none"},gg);}});
+  }
+  // étiquette placée au-delà de la pointe d'un vecteur, dans sa direction
+  function lbl(parts,tip,dir,color,g){
+    var s=P(tip[0],tip[1]),ux=dir[0],uy=-dir[1];
+    var x=s[0]+ux*12,y=s[1]+uy*14+(uy>0.3?16:(uy<-0.3?-2:6)),an=ux>0.35?"start":(ux<-0.35?"end":"middle");
+    vlabel(parts,x,y,color,an,g);
+  }
+  function text(str,p,dx,dy,anchor,g,italic,color,size){
+    var s=P(p[0],p[1]),t=el("text",{x:s[0]+dx,y:s[1]+dy,"font-size":(size||19)*LS,"text-anchor":anchor||"start"},g);
+    if(italic!==false)t.setAttribute("font-style","italic");t.style.fill=color||cs("--ink");t.textContent=str;return t;
+  }
+  // angle orienté de a0 à a1 (degrés) : secteur coloré, arc, flèche qui se termine sur le vecteur d'arrivée, nom
+  function angleMark(c,r,a0,a1,name,col,g){
+    var pts=[],n=48,i;for(i=0;i<=n;i++)pts.push(ad(c,pol(r,a0+(a1-a0)*i/n)));
+    var d=pts.map(function(q,j){var s=P(q[0],q[1]);return (j?"L":"M")+s[0].toFixed(1)+","+s[1].toFixed(1);}).join("");
+    var c0=P(c[0],c[1]);
+    el("path",{d:"M"+c0[0]+","+c0[1]+d.replace("M","L")+"Z",fill:col,"fill-opacity":.2,stroke:"none"},g);
+    el("path",{d:d,fill:"none",stroke:col,"stroke-width":2.8,"stroke-linecap":"round"},g);
+    if(Math.abs(a1-a0)>1){var q=P(pts[n][0],pts[n][1]),r0=P(pts[n-3][0],pts[n-3][1]),dx=q[0]-r0[0],dy=q[1]-r0[1],L=Math.hypot(dx,dy)||1;head(q,dx/L,dy/L,col,g,11*LS);}
+    var m=ad(c,pol(r+0.38,(a0+a1)/2));text(name,m,0,7*LS,"middle",g,true,col,23);
+  }
+
+
+  // point du repère lié au corps 1 : (s le long de x1, n le long de y1), exprimé dans R0
+  function L1(s,n){var c=Math.cos(st.al*rad),d=Math.sin(st.al*rad);return [s*c-n*d,s*d+n*c];}
+  function draw(){
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var ink=cs("--ink"),red=cs("--red"),blue=cs("--blue"),green=cs("--green"),tr=cs("--trace"),panel=cs("--panel");
+    U=Math.min(40,270/(LMAX+1.0));st.la=cl(st.la,LMIN,LMAX);
+    var al=st.al,la=st.la,O=[0,0],B=L1(la,0);
+    var AR=hideB?function(){}:arrow,LB=hideB?function(){}:lbl;
+    var back=el("g",{}),ax=el("g",{}),lab=el("g",{});
+    var o=P(0,0);
+    function ln(p,q,w,c,g,op){var a=P(p[0],p[1]),b=P(q[0],q[1]);el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:c,"stroke-width":w,"stroke-linecap":"round",opacity:op===undefined?1:op},g);}
+    // barre : trait encre par défaut ; teinte atténuée et / ou contour coloré selon les options
+    function solid(p,q,col,w,g){
+      if(!tint&&!contour){ln(p,q,w,ink,g);return;}
+      var W=w*2+1;
+      if(contour){ln(p,q,W,col,g);ln(p,q,W-4,panel,g);}
+      if(tint)ln(p,q,contour?W-4:W,col,g,.3);
+      ln(p,q,2.6,ink,g);
+    }
+    // corps 1 : rectangle (de 0,75 à 3,2 sur x1, demi-largeur 0,25), plus la queue de chape
+    function body(g){
+      var q=[L1(0.75,-0.25),L1(0.75+LC,-0.25),L1(0.75+LC,0.25),L1(0.75,0.25)].map(function(c){var s=P(c[0],c[1]);return s[0].toFixed(1)+","+s[1].toFixed(1);}).join(" ");
+      var fillc=tint?red:"none",poly=function(a){return el("polygon",{points:q,fill:"none","stroke-linejoin":"round"},g);};
+      if(contour){var p0=poly();p0.setAttribute("stroke",red);p0.setAttribute("stroke-width",6);var p1=poly();p1.setAttribute("stroke",panel);p1.setAttribute("stroke-width",2);}
+      var pf=el("polygon",{points:q,fill:tint?red:panel,"fill-opacity":tint?.3:0,stroke:ink,"stroke-width":2.2,"stroke-linejoin":"round"},g);
+      solid([0,0].concat(),L1(0.75,0),red,5,g);
+    }
+    // châssis 0
+    var f0=P(-0.7,-1.0),f1=P(0.7,-1.0),g1=P(-0.7,-1.3),g2=P(0.7,-1.3);
+    ln([0,0],[0,-1.0],5,ink,back);
+    el("rect",{x:f0[0],y:f0[1],width:f1[0]-f0[0],height:g1[1]-f0[1],fill:"none",stroke:ink,"stroke-width":2},back);
+    var yb=P(0,-1.3)[1];for(var h=f0[0];h<f1[0]+8;h+=8){el("line",{x1:Math.min(h,f1[0]),y1:yb,x2:h-8,y2:yb+11,stroke:ink,"stroke-width":1.2},back);}
+    if(trace.length>1){var d="";trace.forEach(function(p,i){var s=P(p[0],p[1]);d+=(i?"L":"M")+s[0].toFixed(1)+","+s[1].toFixed(1);});
+      el("path",{d:d,fill:"none",stroke:tr,"stroke-width":1.8,"stroke-linejoin":"round"},back);}
+    body(back);
+    // tige 2 : de λ − 3,2 à λ, avec le piston
+    solid(L1(la-LT,0),B,blue,7,back);
+    ln(L1(la-LT,-0.17),L1(la-LT,0.17),3,ink,back);
+    // angle
+    if(angles){
+      arrow(O,L1(1.7,0),red,1.2,ax,true);
+      angleMark(O,1.0,0,al,"α",red,ax);
+    }
+    // bases
+    AR(O,[3.2,0],ink,1.8,ax);if(full)AR(O,[0,2.4],ink,1.8,ax);
+    AR(B,L1(la+1.0,0),red,1.8,ax);
+    if(full)AR(B,ad(B,L1(0,1.4)),red,1.8,ax);
+    // vitesses de B (échelle arbitraire)
+    var rd="";
+    if(showV){
+      var K=1.0,va=sp.la*K,vb=sp.al*rad*la*K,x1=L1(1,0),y1=L1(0,1);
+      var P21=ad(B,x1,va),P10=ad(B,y1,vb),P20=ad(ad(B,x1,va),y1,vb);
+      arrow(B,P21,blue,2,ax);arrow(B,P10,red,2,ax);arrow(B,P20,tr,2.4,ax);
+      if(Math.abs(va)>0.12)lbl([["V","2/1"]],P21,[(x1[0]-y1[0])*0.7071,(x1[1]-y1[1])*0.7071],blue,lab);
+      if(Math.abs(vb)>0.12)lbl([["V","1/0"]],P10,y1,red,lab);
+      if(Math.hypot(va,vb)>0.12)lbl([["V","2/0"]],P20,[(x1[0]*va+y1[0]*vb)/Math.hypot(va,vb),(x1[1]*va+y1[1]*vb)/Math.hypot(va,vb)],tr,lab);
+      rd="Vitesses de B dessinées à une échelle arbitraire : V(B∈2/1) = λ̇ x₁ (bleu), V(B∈1/0) en rouge, V(B∈2/0) en orange.";
+    }
+    var sO=P(0,0);el("circle",{cx:sO[0],cy:sO[1],r:7,fill:panel,stroke:ink,"stroke-width":2},ax);
+    var sb=P(B[0],B[1]);el("circle",{cx:sb[0],cy:sb[1],r:4.2,fill:ink},ax);
+    LB([["x","0"]],[3.2,0],[1,0],ink,lab);if(full)LB([["y","0"]],[0,2.4],[0,1],ink,lab);
+    LB([["x","1"]],L1(la+1.0,0),L1(1,0),red,lab);if(full)LB([["y","1"]],ad(B,L1(0,1.4)),L1(0,1),red,lab);
+    text("O",O,12,22,"start",lab);
+    var nB=L1(0,-1);text("B",ad(B,nB,0.55),0,6,"middle",lab);
+    function circ(num,p,dx,dy){var s=P(p[0],p[1]);el("circle",{cx:s[0]+dx,cy:s[1]+dy,r:9*LS,fill:panel,stroke:ink,"stroke-width":1.2},lab);
+      var t=el("text",{x:s[0]+dx,y:s[1]+dy+5*LS,"font-size":13*LS,"text-anchor":"middle"},lab);t.textContent=num;}
+    circ("1",L1(2.0,0.65),0,0);circ("2",L1(Math.max(0.75+LC+0.5,la-0.7),0.5),0,0);circ("0",[-0.95,-1.2],0,0);
+    document.getElementById("rd").textContent=rd;
+    document.getElementById("alv").textContent=(Math.round(st.al)%360)+"°";document.getElementById("al").value=Math.round(st.al)%360;
+    setNum("valn",sp.al);
+    document.getElementById("lav").textContent=f2(st.la);document.getElementById("la").value=st.la;
+    setNum("vlan",sp.la);document.getElementById("vla").value=sp.la;
+  }
+  function pushTrace(){if(!tracing)return;var B=L1(st.la,0),l=trace[trace.length-1];
+    if(!l||Math.hypot(l[0]-B[0],l[1]-B[1])>0.03){trace.push(B);if(trace.length>TRMAX)trace.shift();}}
+  // vitesse saisie à la main : toute valeur est acceptée (le curseur reste limité, mais pas la valeur)
+  function setNum(id,v){var i=document.getElementById(id);if(i&&document.activeElement!==i)i.value=String(Math.round(v*1000)/1000);}
+  function bindNum(keys){keys.forEach(function(k){var n=document.getElementById("v"+k+"n");
+    n.addEventListener("input",function(){var v=parseFloat(n.value.replace(",","."));if(isFinite(v)){sp[k]=v;document.getElementById("v"+k).value=v;draw();}});
+    n.addEventListener("blur",function(){setNum("v"+k+"n",sp[k]);});});}
+  function update(){pushTrace();draw();}
+  var cl=function(v,a,b){return Math.max(a,Math.min(b,v));};
+  function rnd(v){return Math.round(v*100)/100;}
+
+  document.getElementById("al").addEventListener("input",function(e){st.al=norm(+e.target.value);update();});
+  document.getElementById("la").addEventListener("input",function(e){st.la=+e.target.value;update();});
+  document.getElementById("val").addEventListener("input",function(e){sp.al=+e.target.value;draw();});
+  document.getElementById("vla").addEventListener("input",function(e){sp.la=+e.target.value;draw();});
+  document.querySelectorAll(".row button").forEach(function(b){b.addEventListener("click",function(){
+    var k=b.dataset.k,d=b.dataset.d;
+    if(k==="al"){st.al=d==="reset"?0:norm(Math.round(st.al)+(+d));update();}
+    else if(k==="la"){st.la=d==="reset"?4.8:rnd(cl(st.la+(+d),LMIN,LMAX));update();}
+    else if(k==="val"){sp.al=+d===0?0:sp.al+(+d);draw();}
+    else if(k==="vla"){sp.la=+d===0?0:rnd(sp.la+(+d));draw();}
+  });});
+  [["oAng","angles"],["oFull","full"],["oTint","tint"],["oCont","contour"]].forEach(function(o){
+    document.getElementById(o[0]).addEventListener("change",function(e){
+      if(o[1]==="angles")angles=e.target.checked;else if(o[1]==="full")full=e.target.checked;else if(o[1]==="tint")tint=e.target.checked;else contour=e.target.checked;draw();});});
+  document.getElementById("oTr").addEventListener("change",function(e){tracing=e.target.checked;if(tracing)pushTrace();draw();});
+  document.getElementById("clr").addEventListener("click",function(){trace=[];pushTrace();draw();});
+
+  var last=0,raf=null,playBtn=document.getElementById("play");
+  function setPlay(on){playing=on;playBtn.setAttribute("aria-pressed",on?"true":"false");playBtn.textContent=on?"Pause":"Lancer";playBtn.classList.toggle("main",!on);
+    if(on&&!raf){last=performance.now();raf=requestAnimationFrame(loop);}}
+  function loop(ts){var dt=Math.min(0.05,(ts-last)/1000);last=ts;if(!playing){raf=null;return;}
+    st.al=norm(st.al+sp.al*dt);
+    st.la+=sp.la*dt;                                   // la tige va et vient entre les deux butées
+    if(st.la>LMAX){st.la=LMAX;sp.la=-sp.la;}else if(st.la<LMIN){st.la=LMIN;sp.la=-sp.la;}
+    update();raf=requestAnimationFrame(loop);}
+  playBtn.addEventListener("click",function(){setPlay(!playing);});
+  document.getElementById("rst").addEventListener("click",function(){setPlay(false);st={al:125,la:4.8};trace=[];pushTrace();draw();});
+  document.getElementById("zero").addEventListener("click",function(){setPlay(false);st={al:0,la:4.8};sp={al:0,la:0};trace=[];pushTrace();draw();});
+  // ---- taille de l'affichage : automatique d'après l'écran, réglable par A− / A+ (mémorisée sur l'appareil) ----
+
+  // ---- options réservées à l'enseignant : le code est comparé par empreinte (il n'apparaît pas en clair dans la page) ----
+  // Pour changer le code : ouvrir la console du navigateur, taper codeHash("nouveau code") et remplacer la valeur de CODE_H.
+  var CODE_H=433024637;
+  function codeHash(s){var h=5381,i;for(i=0;i<s.length;i++)h=(((h*33)^s.charCodeAt(i))>>>0);return h;}
+  window.codeHash=codeHash;
+  var unlocked=false;try{unlocked=localStorage.getItem("anim-code")===String(CODE_H);}catch(e){}
+  function applyLock(){
+    document.getElementById("lV").hidden=!unlocked;document.getElementById("clock").hidden=!unlocked;document.getElementById("cbtn").hidden=unlocked;
+    if(unlocked)document.getElementById("cbox").hidden=true;
+    if(!unlocked){showV=false;document.getElementById("oV").checked=false;}
+    draw();}
+  document.getElementById("cbtn").addEventListener("click",function(){var b=document.getElementById("cbox");b.hidden=!b.hidden;if(!b.hidden)document.getElementById("cin").focus();});
+  function tryCode(){var i=document.getElementById("cin");
+    if(codeHash(i.value)===CODE_H){unlocked=true;try{localStorage.setItem("anim-code",String(CODE_H));}catch(e){}i.value="";applyLock();}
+    else{i.value="";i.placeholder="code incorrect";}}
+  document.getElementById("cok").addEventListener("click",tryCode);
+  document.getElementById("cin").addEventListener("keydown",function(e){if(e.key==="Enter")tryCode();});
+  document.getElementById("clock").addEventListener("click",function(){unlocked=false;try{localStorage.removeItem("anim-code");}catch(e){}applyLock();});
+  document.getElementById("oV").addEventListener("change",function(e){showV=e.target.checked;draw();});
+  document.getElementById("oHide").addEventListener("change",function(e){hideB=e.target.checked;var f=document.getElementById("oFull");f.disabled=hideB;draw();});
+
+  // ---- dimensions des pièces : partie repliée, modifiable par l'utilisateur (unité du dessin) ----
+  var TRMAX=8000;
+  function dimsSetup(DIMS,after){
+    var fd=function(v,d){return d&&d.int?String(Math.round(v)):v.toFixed(2).replace(".",",");};
+    DIMS.forEach(function(d){var i=document.getElementById("d_"+d.id),o=document.getElementById("d_"+d.id+"v");
+      i.min=d.min;i.max=d.max;i.step=d.step;i.value=d.def;o.textContent=fd(d.def,d);d.set(d.def);
+      i.addEventListener("input",function(){var v=+i.value;d.set(v);o.textContent=fd(v,d);after(d);});});
+    document.getElementById("dreset").addEventListener("click",function(){DIMS.forEach(function(d){
+      document.getElementById("d_"+d.id).value=d.def;document.getElementById("d_"+d.id+"v").textContent=fd(d.def,d);d.set(d.def);});after(null);});
+  }
+
+  var KEY="camion-zoom",Z=1,manual=null;
+  try{var sv=parseFloat(localStorage.getItem(KEY));if(sv>0)manual=sv;}catch(e){}
+  function autoZoom(){
+    var touch=window.matchMedia("(hover:none) and (pointer:coarse)").matches,w=window.innerWidth,h=window.innerHeight;
+    if(!touch||h<w)return 1;
+    var ref=Math.min(screen.width||w,screen.height||w);
+    if(w>ref*1.25)return Math.min(3,w/ref);
+    if(w>420&&w<=600)return w/412;
+    return 1;}
+  function applyZoom(){
+    Z=manual!==null?manual:autoZoom();Z=Math.max(0.8,Math.min(3,Z));
+    document.documentElement.style.setProperty("--z",Z.toFixed(2));LS=Math.min(1.5,1+(Z-1)*0.35);
+    document.getElementById("info").textContent="Affichage ×"+Z.toFixed(2).replace(".",",")+(manual===null?" (auto)":"");
+    draw();}
+  function setManual(v){manual=v;try{if(v===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,v);}catch(e){}applyZoom();}
+  document.getElementById("zp").addEventListener("click",function(){setManual(Math.min(3,Math.round((Z+0.15)*100)/100));});
+  document.getElementById("zm").addEventListener("click",function(){setManual(Math.max(0.8,Math.round((Z-0.15)*100)/100));});
+  document.getElementById("za").addEventListener("click",function(){setManual(null);});
+  window.addEventListener("resize",function(){if(manual===null)applyZoom();});
+  var mq=window.matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+  function camionAfter(){LMIN=0.8+LT;LMAX=0.75+LC+LT-0.4;var la=document.getElementById("la");la.min=LMIN;la.max=LMAX;st.la=cl(st.la,LMIN,LMAX);trace=[];pushTrace();draw();}
+  var LMINs=4.0,LMAXs=6.0;
+  function camionAfter(d){if(d&&d.keep){while(trace.length>TRMAX)trace.shift();draw();return;}LMIN=Math.min(LMINs,LMAXs);LMAX=Math.max(LMINs,LMAXs);var la=document.getElementById("la");la.min=LMIN;la.max=LMAX;st.la=cl(st.la,LMIN,LMAX);trace=[];pushTrace();draw();}
+  dimsSetup([{id:"c",min:0,max:5,step:0.05,def:2.45,set:function(v){LC=v;}},{id:"t",min:0,max:5,step:0.05,def:3.2,set:function(v){LT=v;}},{id:"m",min:0,max:8,step:0.05,def:4.0,set:function(v){LMINs=v;}},{id:"M",min:0,max:8,step:0.05,def:6.0,set:function(v){LMAXs=v;}},{id:"n",min:500,max:50000,step:500,def:8000,int:true,keep:true,set:function(v){TRMAX=v;}}],camionAfter);
+  camionAfter();
+  bindNum(["al","la"]);
+  // plein écran (API native si disponible, sinon figure plaquée sur toute la fenêtre) + compteur de points de la trace
+  (function(){var fg=document.querySelector(".fig"),fb=document.getElementById("fsb"),fp=document.getElementById("fsplay"),pl=document.getElementById("play"),pseudo=false;
+    function isFs(){return fg.classList.contains("fs");}
+    function setFs(on){fg.classList.toggle("fs",on);fb.textContent=on?"Quitter":"Plein écran";document.body.style.overflow=on?"hidden":"";syncPlay();}
+    function syncPlay(){fp.textContent=pl.textContent;}
+    fb.addEventListener("click",function(){
+      if(isFs()){if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}setFs(false);return;}
+      var rq=fg.requestFullscreen||fg.webkitRequestFullscreen;setFs(true);
+      if(rq){try{var r=rq.call(fg);if(r&&r.catch)r.catch(function(){});}catch(e){}}});
+    function onChange(){if(!document.fullscreenElement&&!document.webkitFullscreenElement&&isFs()&&fg.dataset.api==="1"){fg.dataset.api="";setFs(false);}else if(document.fullscreenElement||document.webkitFullscreenElement){fg.dataset.api="1";}}
+    document.addEventListener("fullscreenchange",onChange);document.addEventListener("webkitfullscreenchange",onChange);
+    document.addEventListener("keydown",function(e){if(e.key==="Escape"&&isFs()&&!document.fullscreenElement&&!document.webkitFullscreenElement)setFs(false);});
+    fp.addEventListener("click",function(){pl.click();syncPlay();});
+    new MutationObserver(syncPlay).observe(pl,{childList:true,characterData:true,subtree:true});
+    var tc=document.getElementById("tcount"),ot=document.getElementById("oTr"),dr=draw;
+    draw=function(){dr();tc.textContent=(ot&&ot.checked)?"Trace : "+trace.length+" / "+TRMAX+" points":"";};
+  })();
+  pushTrace();applyZoom();applyLock();
+})();
+</script>
+
+</body></html>

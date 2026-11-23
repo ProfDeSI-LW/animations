@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Systèmes de coordonnées</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=STIX+Two+Text:ital@0;1&display=swap">
+<style>
+/* Mise en page : figure 3D à gauche, réglages et formules à droite ; une colonne sur téléphone */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --fg:#1b2230; --muted:#5d6676; --line:#d9dde5; --accent:#1f4fbf;
+  --axis:#111827; --guide:#8a93a3;
+  --cx:#a31d1d; --cy:#1d6b35; --cz:#1b3fa8; --crho:#6a2bb0; --cr:#a5560b; --cth:#0f766e; --cph:#b81d5f;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --math:"STIX Two Text",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --panel:#1a202a; --fg:#e8ebf1; --muted:#9aa4b5; --line:#2e3644; --accent:#7ea2ff;
+  --axis:#e8ebf1; --guide:#6f7a8c;
+  --cx:#f0716b; --cy:#5fcf80; --cz:#7ea2ff; --crho:#b88cf5; --cr:#f0a04b; --cth:#3fd0c0; --cph:#f27fae; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --panel:#1a202a; --fg:#e8ebf1; --muted:#9aa4b5; --line:#2e3644; --accent:#7ea2ff;
+  --axis:#e8ebf1; --guide:#6f7a8c;
+  --cx:#f0716b; --cy:#5fcf80; --cz:#7ea2ff; --crho:#b88cf5; --cr:#f0a04b; --cth:#3fd0c0; --cph:#f27fae; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-size:14px}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:1.45rem;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.92rem}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:500;padding:8px 16px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabs button:focus-visible,.btn:focus-visible,canvas:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stage{padding:0;overflow:hidden;position:relative}
+canvas{display:block;width:100%;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+.hint{position:absolute;left:12px;bottom:8px;font-size:.78rem;color:var(--muted);pointer-events:none}
+.views{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line)}
+.btn{font:inherit;font-size:.85rem;padding:5px 11px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:7px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.opts{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;font-size:.85rem;align-items:center}
+.opts label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:0 0 10px}
+.row{display:grid;grid-template-columns:2.4rem minmax(0,1fr) 4.6rem;gap:10px;align-items:center;margin-bottom:4px}
+.row .sym{font-family:var(--math);font-style:italic;font-size:1.3rem;font-weight:400;text-align:center}
+.row output{font-variant-numeric:tabular-nums;text-align:right;font-size:.92rem}
+.row input{width:100%;margin:0;accent-color:var(--accent)}
+.row.v{grid-template-columns:3.4rem minmax(0,1fr) 4.6rem}
+.fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-radius:6px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary h2{margin:0}
+.fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s;margin-right:4px}
+.fold[open]>summary{margin-bottom:10px}
+.fold[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.desc{grid-column:2 / 4;font-size:.8rem;color:var(--muted);margin:-2px 0 8px}
+.read{display:flex;flex-direction:column;gap:6px}
+.read div{display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:7px;border:1px solid var(--line);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.read div.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.read b{font-weight:500;color:var(--muted)}
+.read .on b{color:var(--fg)}
+.math{font-family:var(--math);font-size:1.05rem;line-height:1.9}
+.math i{font-style:italic}
+.formules p{margin:0 0 4px}
+.vec{position:relative;display:inline-block}
+.vec::before{content:"→";position:absolute;left:0;right:0;top:-.72em;text-align:center;font-size:.7em;font-style:normal;line-height:1}
+.note{font-size:.82rem;color:var(--muted);margin:8px 0 0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Systèmes de coordonnées</h1>
+    <p class="sub">Déplacez le point M, changez de système et tournez la figure à la souris ou au doigt. Le point reste le même, seul son repérage change.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Système de coordonnées">
+    <button role="tab" id="t-cart" aria-selected="true">Cartésiennes</button>
+    <button role="tab" id="t-cyl" aria-selected="false">Cylindriques</button>
+    <button role="tab" id="t-sph" aria-selected="false">Sphériques</button>
+  </div>
+
+  <div class="grid">
+    <div class="card stage">
+      <canvas id="cv" tabindex="0" aria-label="Figure 3D du point M et de ses coordonnées. Faites glisser pour tourner, flèches du clavier pour tourner."></canvas>
+      <div class="views">
+        <button class="btn" data-v="persp">Vue 3D</button>
+        <button class="btn" data-v="top">Dessus</button>
+        <button class="btn" data-v="face">Face</button>
+        <button class="btn" data-v="side">Côté</button>
+        <div class="opts">
+          <label><input type="checkbox" id="o-base" checked> Base locale en M</label>
+          <label><input type="checkbox" id="o-surf" checked> Surface de repérage</label>
+          <label><input type="checkbox" id="o-vol"> Volume élémentaire en M</label>
+          <label><input type="checkbox" id="o-fuite"> Point de fuite</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <details class="card fold" id="coordcard" open>
+        <summary><h2>Coordonnées de M</h2></summary>
+        <div id="sliders"></div>
+        <p class="note">Une unité correspond à une graduation de la grille du plan xOy.</p>
+      </details>
+      <details class="card fold" id="volcard" open hidden>
+        <summary><h2>Volume élémentaire</h2></summary>
+        <div id="vsliders"></div>
+      </details>
+      <div class="card">
+        <h2>Le même point dans les trois systèmes</h2>
+        <div class="read" id="read"></div>
+      </div>
+      <div class="card formules">
+        <h2>Formules</h2>
+        <div class="math" id="formules"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const S={x:1.0,y:1.7,z:1.2,theta:Math.atan2(1.7,1.0),sys:'cart',yaw:-2.25,pitch:0.5,base:true,surf:true,vol:false,fuite:false,anim:1};
+const VIEWS={persp:[-2.25,0.5],top:[0,Math.PI/2],face:[0,0.0],side:[-Math.PI/2,0.0]};
+const D2R=Math.PI/180;
+let W=600,H=460,U=60,CX=300,CY=240,DPR=1;
+
+/* ---------- Conversions ---------- */
+function theta(){const r=Math.hypot(S.x,S.y);if(r>1e-6)S.theta=Math.atan2(S.y,S.x);return S.theta}
+function allCoords(){
+  const rho=Math.hypot(S.x,S.y), r=Math.hypot(S.x,S.y,S.z), th=theta();
+  const phi=r>1e-6?Math.acos(Math.max(-1,Math.min(1,S.z/r))):0;
+  return {x:S.x,y:S.y,z:S.z,rho,r,th,phi};
+}
+const fmt=(v,d=2)=>(Math.abs(v)<0.005&&d===2?0:v).toFixed(d).replace('.',',').replace('-','−');
+const deg=v=>fmt(v)+' rad';
+
+/* ---------- Description des systèmes ---------- */
+const SYS={
+ cart:{coords:[
+   {sym:'x',col:'--cx',min:-2.5,max:2.5,desc:'abscisse, mesure de OM le long de Ox',get:c=>c.x},
+   {sym:'y',col:'--cy',min:-2.5,max:2.5,desc:'ordonnée, mesure de OM le long de Oy',get:c=>c.y},
+   {sym:'z',col:'--cz',min:-2.2,max:2.2,desc:'cote, mesure de OM le long de Oz',get:c=>c.z}],
+   set(v){S.x=v[0];S.y=v[1];S.z=v[2]},
+   formulas:`<p>Base fixe <span class="vec"><i>e</i><sub>x</sub></span>, <span class="vec"><i>e</i><sub>y</sub></span>, <span class="vec"><i>e</i><sub>z</sub></span></p>
+     <p><span class="vec">OM</span> = <i>x</i> <span class="vec"><i>e</i><sub>x</sub></span> + <i>y</i> <span class="vec"><i>e</i><sub>y</sub></span> + <i>z</i> <span class="vec"><i>e</i><sub>z</sub></span></p>
+     <p>ρ = √(<i>x</i>² + <i>y</i>²)  ;  tan θ = <i>y</i> / <i>x</i></p>
+     <p><i>r</i> = √(<i>x</i>² + <i>y</i>² + <i>z</i>²)  ;  cos φ = <i>z</i> / <i>r</i></p>
+     <p>d<i>V</i> = d<i>x</i> d<i>y</i> d<i>z</i></p>`},
+ cyl:{coords:[
+   {sym:'ρ',col:'--crho',min:0,max:2.8,desc:'distance de M à l’axe Oz',get:c=>c.rho},
+   {sym:'θ',col:'--cth',min:-Math.PI,max:Math.PI,ang:1,desc:'angle de Ox vers OH dans le plan xOy',get:c=>c.th},
+   {sym:'z',col:'--cz',min:-2.2,max:2.2,desc:'cote, identique au cartésien',get:c=>c.z}],
+   set(v){S.theta=v[1];S.x=v[0]*Math.cos(v[1]);S.y=v[0]*Math.sin(v[1]);S.z=v[2]},
+   formulas:`<p><span class="vec">OM</span> = ρ <span class="vec"><i>e</i><sub>ρ</sub></span> + <i>z</i> <span class="vec"><i>e</i><sub>z</sub></span></p>
+     <p><i>x</i> = ρ cos θ  ;  <i>y</i> = ρ sin θ</p>
+     <p><span class="vec"><i>e</i><sub>ρ</sub></span> = cos θ <span class="vec"><i>e</i><sub>x</sub></span> + sin θ <span class="vec"><i>e</i><sub>y</sub></span></p>
+     <p><span class="vec"><i>e</i><sub>θ</sub></span> = −sin θ <span class="vec"><i>e</i><sub>x</sub></span> + cos θ <span class="vec"><i>e</i><sub>y</sub></span></p>
+     <p>d<i>V</i> = ρ dρ dθ d<i>z</i></p>`},
+ sph:{coords:[
+   {sym:'r',col:'--cr',min:0,max:3,desc:'distance OM, de l’origine au point',get:c=>c.r},
+   {sym:'θ',col:'--cth',min:-Math.PI,max:Math.PI,ang:1,desc:'angle de Ox vers OH dans le plan xOy',get:c=>c.th},
+   {sym:'φ',col:'--cph',min:0,max:Math.PI,ang:1,desc:'angle de Oz vers OM',get:c=>c.phi}],
+   set(v){S.theta=v[1];const rh=v[0]*Math.sin(v[2]);S.x=rh*Math.cos(v[1]);S.y=rh*Math.sin(v[1]);S.z=v[0]*Math.cos(v[2])},
+   formulas:`<p><span class="vec">OM</span> = <i>r</i> <span class="vec"><i>e</i><sub>r</sub></span></p>
+     <p><i>x</i> = <i>r</i> sin φ cos θ  ;  <i>y</i> = <i>r</i> sin φ sin θ  ;  <i>z</i> = <i>r</i> cos φ</p>
+     <p><span class="vec"><i>e</i><sub>r</sub></span> = sin φ cos θ <span class="vec"><i>e</i><sub>x</sub></span> + sin φ sin θ <span class="vec"><i>e</i><sub>y</sub></span> + cos φ <span class="vec"><i>e</i><sub>z</sub></span></p>
+     <p><span class="vec"><i>e</i><sub>φ</sub></span> = cos φ cos θ <span class="vec"><i>e</i><sub>x</sub></span> + cos φ sin θ <span class="vec"><i>e</i><sub>y</sub></span> − sin φ <span class="vec"><i>e</i><sub>z</sub></span></p>
+     <p>d<i>V</i> = <i>r</i>² sin φ d<i>r</i> dθ dφ</p>`}
+};
+
+/* ---------- Interface ---------- */
+const DIFF={cart:[0.55,0.55,0.55],cyl:[0.55,0.45,0.55],sph:[0.55,0.45,0.45]};
+const VDEF={
+  cart:[['dx','--cx',0.1,1.2,0],['dy','--cy',0.1,1.2,0],['dz','--cz',0.1,1.2,0]],
+  cyl:[['dρ','--crho',0.1,1.2,0],['dθ','--cth',0.05,1.2,1],['dz','--cz',0.1,1.2,0]],
+  sph:[['dr','--cr',0.1,1.2,0],['dθ','--cth',0.05,1.2,1],['dφ','--cph',0.05,1.2,1]]};
+const vsEl=document.getElementById('vsliders'), vcard=document.getElementById('volcard');
+function buildVol(){
+  vcard.hidden=!S.vol;vsEl.innerHTML='';
+  VDEF[S.sys].forEach((d,i)=>{
+    const row=document.createElement('div');row.className='row v';
+    row.innerHTML=`<label class="sym" for="v${i}" style="color:var(${d[1]})">${d[0]}</label><input type="range" id="v${i}" min="${d[2]}" max="${d[3]}" step="0.01" value="${DIFF[S.sys][i]}"><output for="v${i}">${fmt(DIFF[S.sys][i])}${d[4]?' rad':''}</output>`;
+    vsEl.appendChild(row);
+    const inp=row.querySelector('input'),out=row.querySelector('output');
+    inp.addEventListener('input',()=>{DIFF[S.sys][i]=parseFloat(inp.value);out.textContent=fmt(DIFF[S.sys][i])+(d[4]?' rad':'');draw()});
+  });
+}
+const slidersEl=document.getElementById('sliders'), readEl=document.getElementById('read'), formEl=document.getElementById('formules');
+let sliderRefs=[];
+function buildSliders(){
+  slidersEl.innerHTML='';sliderRefs=[];
+  const sys=SYS[S.sys];
+  sys.coords.forEach((c,i)=>{
+    const row=document.createElement('div');row.className='row';
+    const id='s'+i;
+    row.innerHTML=`<label class="sym" for="${id}" style="color:var(${c.col})">${c.sym}</label>
+      <input type="range" id="${id}" min="${c.min}" max="${c.max}" step="0.01">
+      <output for="${id}"></output>
+      <div class="desc">${c.desc}</div>`;
+    slidersEl.appendChild(row);
+    const inp=row.querySelector('input');
+    inp.addEventListener('input',()=>{
+      const v=sys.coords.map((cc,j)=>{const val=parseFloat(sliderRefs[j].inp.value);return val});
+      sys.set(v);refresh(false);
+    });
+    sliderRefs.push({inp,out:row.querySelector('output'),c});
+  });
+  formEl.innerHTML=sys.formulas;
+}
+function refresh(syncSliders=true){
+  const c=allCoords(), sys=SYS[S.sys];
+  sliderRefs.forEach(s=>{
+    const v=s.c.get(c);
+    if(syncSliders||document.activeElement!==s.inp)s.inp.value=v;
+    s.out.textContent=s.c.ang?deg(v):fmt(v);
+  });
+  const rows=[
+   ['cart','Cartésiennes',`(<i>x</i>, <i>y</i>, <i>z</i>)`,`(${fmt(c.x)} ; ${fmt(c.y)} ; ${fmt(c.z)})`],
+   ['cyl','Cylindriques',`(ρ, θ, <i>z</i>)`,`(${fmt(c.rho)} ; ${deg(c.th)} ; ${fmt(c.z)})`],
+   ['sph','Sphériques',`(<i>r</i>, θ, φ)`,`(${fmt(c.r)} ; ${deg(c.th)} ; ${deg(c.phi)})`]];
+  readEl.innerHTML=rows.map(r=>`<div class="${r[0]===S.sys?'on':''}"><b>${r[1]} ${r[2]}</b><span>${r[3]}</span></div>`).join('');
+  draw();
+}
+function setSystem(k){
+  if(k===S.sys)return;
+  S.sys=k;
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.id==='t-'+k)));
+  buildSliders();buildVol();S.anim=0;animate();refresh();
+}
+['cart','cyl','sph'].forEach(k=>document.getElementById('t-'+k).addEventListener('click',()=>setSystem(k)));
+document.getElementById('o-base').addEventListener('change',e=>{S.base=e.target.checked;draw()});
+document.getElementById('o-fuite').addEventListener('change',e=>{S.fuite=e.target.checked;draw()});
+document.getElementById('o-vol').addEventListener('change',e=>{S.vol=e.target.checked;buildVol();draw()});
+document.getElementById('o-surf').addEventListener('change',e=>{S.surf=e.target.checked;draw()});
+
+/* ---------- Vues ---------- */
+let target=null;
+document.querySelectorAll('[data-v]').forEach(b=>b.addEventListener('click',()=>{
+  const t=VIEWS[b.dataset.v];
+  let dy=t[0]-S.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));
+  target={yaw:S.yaw+dy,pitch:t[1]};animate();
+}));
+let animating=false,last=0;
+function animate(){if(animating)return;animating=true;last=performance.now();requestAnimationFrame(step)}
+function step(now){
+  const dt=Math.min(50,now-last);last=now;let busy=false;
+  if(S.anim<1){S.anim=Math.min(1,S.anim+dt/380);busy=true}
+  if(target){
+    const k=1-Math.pow(0.001,dt/400);
+    S.yaw+=(target.yaw-S.yaw)*k;S.pitch+=(target.pitch-S.pitch)*k;
+    if(Math.abs(target.yaw-S.yaw)<0.002&&Math.abs(target.pitch-S.pitch)<0.002){S.yaw=target.yaw;S.pitch=target.pitch;target=null}else busy=true;
+  }
+  draw();
+  if(busy)requestAnimationFrame(step);else animating=false;
+}
+
+/* ---------- Rotation à la souris / au doigt / au clavier ---------- */
+let drag=null;
+cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};target=null;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  S.yaw-=(e.clientX-drag.x)*0.009;
+  S.pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,S.pitch+(e.clientY-drag.y)*0.007));
+  drag={x:e.clientX,y:e.clientY};draw();
+});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{drag=null}));
+cv.addEventListener('keydown',e=>{
+  const m={ArrowLeft:[0.08,0],ArrowRight:[-0.08,0],ArrowUp:[0,-0.06],ArrowDown:[0,0.06]}[e.key];
+  if(!m)return;e.preventDefault();S.yaw+=m[0];S.pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,S.pitch+m[1]));draw();
+});
+
+/* ---------- Projection ---------- */
+const DIST=16;
+function P(p){
+  const ca=Math.cos(S.yaw),sa=Math.sin(S.yaw),cp=Math.cos(S.pitch),sp=Math.sin(S.pitch);
+  const x1=p[0]*ca-p[1]*sa, y1=p[0]*sa+p[1]*ca;
+  const sx=x1, sy=p[2]*cp+y1*sp, d=y1*cp-p[2]*sp, f=S.fuite?DIST/(DIST+d):1;
+  return [CX+sx*f*U, CY-sy*f*U, d];
+}
+const col=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let C={};
+function readColors(){['--axis','--guide','--cx','--cy','--cz','--crho','--cr','--cth','--cph','--bg','--panel','--fg','--line'].forEach(n=>C[n]=col(n))}
+
+/* ---------- Primitives de dessin ---------- */
+function path3(pts,color,w=1.5,dash=null,alpha=1,close=false){
+  ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.lineJoin='round';ctx.lineCap='round';
+  ctx.beginPath();pts.forEach((p,i)=>{const q=P(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});
+  if(close)ctx.closePath();ctx.stroke();ctx.restore();
+}
+function head(a,b,color,size=10){
+  const A=P(a),B=P(b),ang=Math.atan2(B[1]-A[1],B[0]-A[0]);
+  ctx.save();ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(B[0],B[1]);
+  ctx.lineTo(B[0]-size*Math.cos(ang-0.3),B[1]-size*Math.sin(ang-0.3));
+  ctx.lineTo(B[0]-size*Math.cos(ang+0.3),B[1]-size*Math.sin(ang+0.3));ctx.closePath();ctx.fill();ctx.restore();
+}
+function arrow3(a,b,color,w=2,dash=null,hs=10){path3([a,b],color,w,dash);head(a,b,color,hs)}
+function arc3(c,u,v,r,a0,a1,n=40){
+  const pts=[];for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n;
+    pts.push([c[0]+r*(Math.cos(t)*u[0]+Math.sin(t)*v[0]),c[1]+r*(Math.cos(t)*u[1]+Math.sin(t)*v[1]),c[2]+r*(Math.cos(t)*u[2]+Math.sin(t)*v[2])])}
+  return pts;
+}
+function arcArrow(pts,color,w=2.4){path3(pts,color,w);const n=pts.length;if(n>2)head(pts[n-3],pts[n-1],color,9)}
+function dot(p,color,r=4.5){const q=P(p);ctx.save();ctx.fillStyle=color;ctx.beginPath();ctx.arc(q[0],q[1],r,0,7);ctx.fill();ctx.restore()}
+/* Étiquette : lettre italique, indice, flèche au-dessus si vecteur ; halo pour la lisibilité */
+function label(main,sub,sx,sy,color,{vec=false,size=19}={}){
+  const fam='"STIX Two Text",Georgia,serif';
+  ctx.save();ctx.textBaseline='middle';
+  ctx.font=`italic ${size}px ${fam}`;const w1=ctx.measureText(main).width;
+  let w2=0;const f2=`italic ${Math.round(size*0.66)}px ${fam}`;
+  if(sub){ctx.font=f2;w2=ctx.measureText(sub).width}
+  const x0=sx-(w1+w2)/2;
+  const draws=()=>{ctx.font=`italic ${size}px ${fam}`;ctx.fillText(main,x0,sy);if(sub){ctx.font=f2;ctx.fillText(sub,x0+w1,sy+size*0.28)}};
+  ctx.lineJoin='round';ctx.lineWidth=5;ctx.strokeStyle=C['--panel'];
+  ctx.save();ctx.font=`italic ${size}px ${fam}`;ctx.strokeText(main,x0,sy);if(sub){ctx.font=f2;ctx.strokeText(sub,x0+w1,sy+size*0.28)}ctx.restore();
+  ctx.fillStyle=color;draws();
+  if(vec){const yy=sy-size*0.62;ctx.strokeStyle=color;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x0+w1+w2,yy);
+    ctx.moveTo(x0+w1+w2-4,yy-3);ctx.lineTo(x0+w1+w2,yy);ctx.lineTo(x0+w1+w2-4,yy+3);ctx.stroke()}
+  ctx.restore();
+}
+/* Étiquette placée au milieu d'un segment 3D, décalée perpendiculairement, du côté opposé au centre de la figure */
+let FIG=[0,0];
+function segLabel(a,b,main,sub,color,off=15,opts){
+  const A=P(a),B=P(b),mx=(A[0]+B[0])/2,my=(A[1]+B[1])/2;
+  let nx=-(B[1]-A[1]),ny=B[0]-A[0];const nl=Math.hypot(nx,ny)||1;nx/=nl;ny/=nl;
+  if((mx-FIG[0])*nx+(my-FIG[1])*ny<0){nx=-nx;ny=-ny}
+  label(main,sub,mx+nx*off,my+ny*off,color,opts);
+}
+function ptLabel(p,dx,dy,main,sub,color,opts){const q=P(p);label(main,sub,q[0]+dx,q[1]+dy,color,opts)}
+
+/* ---------- Scène ---------- */
+function draw(){
+  if(!C['--axis'])readColors();
+  readColors();
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=C['--panel'];ctx.fillRect(0,0,W,H);
+  const c=allCoords(),c0=c,th=c.th,O=[0,0,0],M=[S.x,S.y,S.z],Hh=[S.x,S.y,0];
+  const ex=[1,0,0],ey=[0,1,0],ez=[0,0,1];
+  const er=[Math.cos(th),Math.sin(th),0],et=[-Math.sin(th),Math.cos(th),0];
+  const a=Math.max(0,Math.min(1,S.anim)), ease=a*a*(3-2*a);
+  const Pm=P(M),Po=P(O);FIG=[(Pm[0]+Po[0])/2,(Pm[1]+Po[1])/2];
+
+  /* grille du plan xOy */
+  for(let i=-3;i<=3;i++){
+    path3([[i,-3,0],[i,3,0]],C['--line'],1,null,0.8);path3([[-3,i,0],[3,i,0]],C['--line'],1,null,0.8);
+  }
+  /* axes */
+  const AX=3.2;
+  [['x',ex,C['--axis']],['y',ey,C['--axis']],['z',ez,C['--axis']]].forEach(([n,d])=>{
+    path3([[-d[0]*AX*0.9,-d[1]*AX*0.9,-d[2]*AX*0.7],O],C['--guide'],1,[4,4],0.8);
+    arrow3(O,[d[0]*AX,d[1]*AX,d[2]*AX*0.8],C['--axis'],1.6,null,9);
+  });
+  ptLabel([AX+0.35,0,0],0,0,'x',null,C['--axis']);
+  ptLabel([0,AX+0.35,0],0,0,'y',null,C['--axis']);
+  ptLabel([0,0,AX*0.8+0.4],0,0,'z',null,C['--axis']);
+  ptLabel(O,-13,13,'O',null,C['--axis'],{size:18});
+
+  ctx.save();ctx.globalAlpha=ease;
+  const G=C['--guide'];
+  const sys=S.sys;
+  const proj=(p)=>p; // lisibilité
+  /* OM de référence */
+  if(sys==='cart'){
+    const A=[S.x,0,0],B=[S.x,S.y,0],Y=[0,S.y,0],Z=[0,0,S.z],XZ=[S.x,0,S.z],YZ=[0,S.y,S.z];
+    if(S.surf){
+      const edges=[[O,A],[O,Y],[O,Z],[A,B],[Y,B],[A,XZ],[Y,YZ],[Z,XZ],[Z,YZ],[B,M],[XZ,M],[YZ,M]];
+      edges.forEach(e=>path3(e,G,1,[3,4],0.9));
+    }
+    path3([O,A],C['--cx'],3.4);path3([A,B],C['--cy'],3.4);path3([B,M],C['--cz'],3.4);
+    path3([O,M],C['--axis'],1.3,[6,4],0.8);
+    segLabel(O,A,'x',null,C['--cx'],16);segLabel(A,B,'y',null,C['--cy'],16);segLabel(B,M,'z',null,C['--cz'],16);
+  }else if(sys==='cyl'){
+    const rho=c.rho;
+    if(S.surf){
+      if(rho>0.02){
+        path3(arc3([0,0,0],ex,ey,rho,0,Math.PI*2,72),C['--crho'],1,[3,4],0.7,true);
+        path3(arc3([0,0,S.z],ex,ey,rho,0,Math.PI*2,72),C['--crho'],1,null,0.55,true);
+        for(let k=0;k<8;k++){const t=k*Math.PI/4;path3([[rho*Math.cos(t),rho*Math.sin(t),0],[rho*Math.cos(t),rho*Math.sin(t),S.z]],C['--crho'],1,null,0.22)}
+      }
+      path3([O,[0,0,S.z]],G,1,[3,4],0.9);path3([[0,0,S.z],M],G,1,[3,4],0.9);
+    }
+    path3([O,Hh],C['--crho'],3.4);path3([Hh,M],C['--cz'],3.4);
+    path3([O,M],C['--axis'],1.3,[6,4],0.8);
+    if(rho>0.05){
+      const ar=Math.min(0.75,rho*0.6);
+      arcArrow(arc3(O,ex,ey,ar,0,th,36),C['--cth']);
+      const mid=th/2;ptLabel([(ar+0.3)*Math.cos(mid),(ar+0.3)*Math.sin(mid),0],0,0,'θ',null,C['--cth']);
+    }
+    segLabel(O,Hh,'ρ',null,C['--crho'],16);segLabel(Hh,M,'z',null,C['--cz'],16);
+    ptLabel(Hh,12,14,'H',null,C['--guide'],{size:17});
+    dot(Hh,C['--guide'],3.5);
+  }else{
+    const r=c.r,rho=c.rho,phi=c.phi;
+    const vv=[Math.cos(th),Math.sin(th),0];            /* e_rho dans le plan vertical contenant M */
+    if(S.surf&&r>0.02){
+      path3(arc3(O,ex,ey,r,0,Math.PI*2,72),C['--cr'],1,[3,4],0.7,true);                       /* équateur */
+      path3(arc3(O,ez,vv,r,0,Math.PI*2,72),C['--cr'],1,null,0.6,true);                         /* méridien de M */
+      if(rho>0.02)path3(arc3([0,0,S.z],ex,ey,rho,0,Math.PI*2,72),C['--crho'],1,null,0.45,true); /* parallèle de M */
+    }
+    path3([O,Hh],C['--crho'],1.6,[6,4],0.9);path3([Hh,M],G,1.2,[3,4],0.9);
+    path3([O,M],C['--cr'],3.4);
+    if(rho>0.05){
+      const ar=Math.min(0.75,rho*0.6);
+      arcArrow(arc3(O,ex,ey,ar,0,th,36),C['--cth']);
+      const mid=th/2;ptLabel([(ar+0.3)*Math.cos(mid),(ar+0.3)*Math.sin(mid),0],0,0,'θ',null,C['--cth']);
+    }
+    if(r>0.1){
+      const ar2=Math.min(0.95,r*0.5);
+      arcArrow(arc3(O,ez,vv,ar2,0,phi,36),C['--cph']);
+      const m2=phi/2;ptLabel([(ar2+0.3)*Math.sin(m2)*Math.cos(th),(ar2+0.3)*Math.sin(m2)*Math.sin(th),(ar2+0.3)*Math.cos(m2)],0,0,'φ',null,C['--cph']);
+    }
+    segLabel(O,M,'r',null,C['--cr'],16);
+    ptLabel(Hh,12,14,'H',null,C['--guide'],{size:17});dot(Hh,C['--guide'],3.5);
+  }
+  ctx.restore();
+
+  /* volume élémentaire en M */
+  if(S.vol){
+    const dd=DIFF[sys],cth=Math.cos(th),sth=Math.sin(th);let X,cols,names;
+    if(sys==='cart'){X=(a,b,c)=>[S.x+a*dd[0],S.y+b*dd[1],S.z+c*dd[2]];cols=['--cx','--cy','--cz'];names=['dx','dy','dz']}
+    else if(sys==='cyl'){X=(a,b,c)=>{const r=c0.rho+a*dd[0],t=th+b*dd[1];return [r*Math.cos(t),r*Math.sin(t),S.z+c*dd[2]]};cols=['--crho','--cth','--cz'];names=['dρ','ρ dθ','dz']}
+    else{X=(a,b,c)=>{const r=c0.r+a*dd[0],t=th+b*dd[1],f=c0.phi+c*dd[2];return [r*Math.sin(f)*Math.cos(t),r*Math.sin(f)*Math.sin(t),r*Math.cos(f)]};cols=['--cr','--cth','--cph'];names=['dr','r sin φ dθ','r dφ']}
+    const curve=(a,b,c,k)=>{const pts=[];for(let i=0;i<=10;i++){const u=i/10,q=[a,b,c];q[k]=u;pts.push(X(q[0],q[1],q[2]))}return pts};
+    ctx.save();ctx.globalAlpha=ease;
+    const faces=[];
+    for(let k=0;k<3;k++){const i=(k+1)%3,j=(k+2)%3;for(const v of [0,1]){
+      const f=[];const mk=(ui,uj)=>{const q=[0,0,0];q[k]=v;q[i]=ui;q[j]=uj;return X(q[0],q[1],q[2])};
+      for(let t=0;t<=8;t++)f.push(mk(t/8,0));for(let t=1;t<=8;t++)f.push(mk(1,t/8));for(let t=1;t<=8;t++)f.push(mk(1-t/8,1));for(let t=1;t<8;t++)f.push(mk(0,1-t/8));faces.push(f)}}
+    ctx.fillStyle=C['--fg'];faces.forEach(f=>{ctx.save();ctx.globalAlpha=0.06*ease;ctx.beginPath();f.forEach((p,n)=>{const q=P(p);n?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.closePath();ctx.fill();ctx.restore()});
+    for(let k=0;k<3;k++){const i=(k+1)%3,j=(k+2)%3;for(const bi of [0,1])for(const bj of [0,1]){
+      const q=[0,0,0];q[i]=bi;q[j]=bj;path3(curve(q[0],q[1],q[2],k),C[cols[k]],(bi===0&&bj===0)?2.6:1.3)}}
+    for(let k=0;k<3;k++){const q0=[0,0,0],q1=[0,0,0];q1[k]=1;segLabel(X(q0[0],q0[1],q0[2]),X(q1[0],q1[1],q1[2]),names[k],null,C[cols[k]],17,{size:16})}
+    ctx.restore();
+  }
+
+  /* base locale en M */
+  if(S.base){
+    ctx.save();ctx.globalAlpha=0.95*ease;
+    const L=0.9;let vs;
+    if(sys==='cart')vs=[[ex,'--cx','x'],[ey,'--cy','y'],[ez,'--cz','z']];
+    else if(sys==='cyl')vs=[[er,'--crho','ρ'],[et,'--cth','θ'],[ez,'--cz','z']];
+    else{const ph=c.phi;
+      vs=[[[Math.sin(ph)*Math.cos(th),Math.sin(ph)*Math.sin(th),Math.cos(ph)],'--cr','r'],[et,'--cth','θ'],
+          [[Math.cos(ph)*Math.cos(th),Math.cos(ph)*Math.sin(th),-Math.sin(ph)],'--cph','φ']]}
+    vs.forEach(([d,cn,nm])=>{
+      const e=[M[0]+L*d[0],M[1]+L*d[1],M[2]+L*d[2]];
+      arrow3(M,e,C[cn],2.4,null,10);
+      const Pe=P(e),Pa=P(M);let dx=Pe[0]-Pa[0],dy=Pe[1]-Pa[1];const l=Math.hypot(dx,dy)||1;
+      label('e',nm,Pe[0]+dx/l*17,Pe[1]+dy/l*17-2,C[cn],{vec:true,size:18});
+    });
+    ctx.restore();
+  }
+  /* point M */
+  dot(M,C['--fg'],5.5);
+  const dxm=Pm[0]-Po[0],dym=Pm[1]-Po[1],lm=Math.hypot(dxm,dym)||1;
+  label('M',null,Pm[0]-12,Pm[1]-14,C['--fg'],{size:21});
+}
+
+/* ---------- Redimensionnement ---------- */
+function resize(){
+  const w=cv.parentElement.clientWidth;W=w;H=Math.round(Math.max(360,Math.min(w*0.78,560)));
+  DPR=Math.min(window.devicePixelRatio||1,2.5);
+  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.height=H+'px';
+  U=Math.min(W/6.6,H/5.4);CX=W/2;CY=H/2+H*0.08;
+  draw();
+}
+new ResizeObserver(resize).observe(cv.parentElement);
+buildSliders();buildVol();refresh();resize();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>draw());
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>draw());
+new MutationObserver(()=>draw()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>
+</body>
+</html>

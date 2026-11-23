@@ -1,0 +1,473 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bras manipulateur interactif</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=STIX+Two+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+/* Plan : projection orthographique réglable ; la vue par défaut est celle de la figure TikZ du TD (vue isométrique : azimut 45°, élévation 35,26°).
+   Palette : encre, gris du plateau, rouge / bleu / vert des repères R1, R2, R3, orange pour la trace de D. */
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --ink:#1d2330; --muted:#5d6678; --line:#d5d9e2;
+  --plateau:#8f97a6; --red:#b3141b; --blue:#1a2bb8; --green:#0a7a2f; --accent:#1a2bb8; --trace:#c26a00; --ang:#7b2fbf;
+  --font-ui:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-math:"STIX Two Text","Latin Modern Roman","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+    --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151c; --panel:#1b2029; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2c3340;
+  --plateau:#7c8596; --red:#ff8d86; --blue:#8fa8ff; --green:#6fd48f; --accent:#8fa8ff; --trace:#ffb454; --ang:#d0a6ff; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.nv{display:flex;align-items:center;gap:3px;min-width:0}
+.nv i{font-style:normal;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.row input.num{width:100%;min-width:0;font:inherit;font-size:.85rem;color:var(--ink);padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);text-align:right;-moz-appearance:textfield}
+.row input.num::-webkit-inner-spin-button,.row input.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+.dims{border-top:1px solid var(--line);padding-top:8px}
+.dims summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+.dim{display:grid;grid-template-columns:7.2em minmax(0,1fr) 3.4em;gap:8px;align-items:center;margin-top:6px;font-size:.88rem}
+.dim label{font-family:var(--font-math);font-style:italic}
+.dim output{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.dim input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.dims .lnk{margin-top:8px}
+
+[hidden]{display:none !important}
+.lnk{border:0;background:none;padding:0;color:var(--muted);font-size:.8rem;text-decoration:underline;cursor:pointer}
+.codeline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.codeline input{font:inherit;font-size:.85rem;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:8.5rem}
+.codeline button:not(.lnk){padding:2px 9px;font-size:.85rem}
+
+html{font-size:calc(16px * var(--z,1))}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:.94rem;line-height:1.45;
+  padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.3rem;font-weight:600;margin:0;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.zoom{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem}
+.zoom button{min-width:2.1rem;height:2.1rem;padding:0 6px}
+.info{font-size:.75rem;color:var(--muted)}
+.sub{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 20rem;gap:14px;align-items:start}
+@media (max-width:780px){.layout{grid-template-columns:minmax(0,1fr)}}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;position:relative}
+svg{display:block;width:100%;height:auto;max-height:80vh;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+svg.drag{cursor:grabbing}
+.hint{position:absolute;left:14px;bottom:10px;font-size:.8rem;color:var(--muted);pointer-events:none}
+.ctrl{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grp{display:flex;flex-direction:column;gap:4px}
+.row{display:grid;grid-template-columns:1.5em 1.9rem minmax(0,1fr) 1.9rem 1.9rem 8.2ch;gap:4px;align-items:center}
+.row label{font-family:var(--font-math);font-size:1.15rem;font-style:italic}
+.row output{font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+.row.v label{font-size:1rem;color:var(--muted)}
+.row.v output{color:var(--muted);font-size:.88rem}
+.row button{padding:0;height:1.9rem;width:1.9rem;line-height:1;font-size:1.05rem}
+.cap{font-size:.82rem;color:var(--muted);margin-top:2px}
+.sep{border:0;border-top:1px solid var(--line);margin:0}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.main{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.line2{display:flex;gap:18px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.read{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.read b{color:var(--ink);font-weight:600}
+.num{font-variant-numeric:tabular-nums;color:var(--ink)}
+svg text{font-family:var(--font-math);fill:var(--ink)}
+/* Mode « téléphone / tablette tactile » : écran étroit OU écran tactile sans survol (la résolution seule ne suffit pas) */
+@media (max-width:780px), (hover:none) and (pointer:coarse){
+  body{padding-block:8px;-webkit-text-size-adjust:100%}
+  main{gap:8px}
+  h1{font-size:1.1rem}.sub{display:none}
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .fig{position:sticky;top:6px;z-index:5;padding:2px}
+  svg{max-height:44vh}
+  .hint{display:none}
+  .row{grid-template-columns:1.4em 2.4rem minmax(0,1fr) 2.4rem 2.4rem 8.6ch}
+  .row button{height:2.4rem;width:2.4rem;font-size:1.2rem}
+  .row input[type=range]{height:1.9rem}
+  .actions button{min-height:2.5rem;padding:6px 12px}
+  .zoom button{min-width:2.5rem;height:2.5rem}
+  .opts label{min-height:2.2rem}
+  .ctrl{padding:10px;gap:10px}
+}
+/* téléphone en paysage : figure fixe à gauche, réglages à droite */
+@media (hover:none) and (pointer:coarse) and (orientation:landscape), (max-height:520px) and (orientation:landscape){
+  .layout{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
+  svg{max-height:calc(100vh - 28px)}
+}
+.figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+.figtools button{padding:3px 9px;font-size:.85rem}
+#fsplay{display:none}
+.tcount{position:absolute;right:12px;bottom:8px;font-size:.8rem;color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
+.fig.fs{position:fixed;inset:0;z-index:100;border-radius:0;border:0;padding:0;display:flex}
+.fig.fs svg{width:100%;height:100%;max-height:none}
+.fig.fs #fsplay{display:inline-block}
+.fig.fs .hint{display:block}
+</style>
+
+<main>
+  <div class="top">
+   <div>
+    <h1>Bras manipulateur : paramétrage α, β, λ</h1>
+    <p class="sub">Réglez les angles, la longueur λ et leurs vitesses, lancez le mouvement et laissez la trace de C se dessiner. Faites glisser la figure pour changer de point de vue.</p>
+   </div>
+   <div class="zoom" role="group" aria-label="Taille de l'affichage">Taille <button id="zm" aria-label="Réduire l'affichage">A−</button><button id="zp" aria-label="Agrandir l'affichage">A+</button><button id="za" aria-label="Taille automatique" title="Taille automatique">auto</button></div>
+  </div>
+  <div class="layout">
+    <div class="fig">
+      <div class="figtools"><button id="fsplay" type="button">Lancer</button><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
+      <div class="tcount" id="tcount" aria-live="off"></div>
+            <svg id="fig" viewBox="0 0 640 560" role="img" aria-label="Schéma du bras manipulateur : bâti 0, solide 1 en rotation autour de la verticale, solide 2 en rotation autour de x1 et solide 3 qui coulisse selon y2"></svg>
+      <div class="hint">Glisser pour tourner la vue</div>
+    </div>
+    <div class="ctrl">
+      <div class="grp">
+        <div class="row"><label for="al">α</label><button data-k="al" data-d="-1" aria-label="Diminuer α">−</button><input id="al" type="range" min="0" max="359" step="1" value="30"><button data-k="al" data-d="1" aria-label="Augmenter α">+</button><button data-k="al" data-d="reset" aria-label="Valeur de départ de α">0</button><output id="alv"></output></div>
+        <div class="row v"><label for="val">α̇</label><button data-k="val" data-d="-5" aria-label="Diminuer la vitesse">−</button><input id="val" type="range" min="-180" max="180" step="5" value="20"><button data-k="val" data-d="5" aria-label="Augmenter la vitesse">+</button><button data-k="val" data-d="0" aria-label="Vitesse nulle">0</button><span class="nv"><input class="num" id="valn" type="number" step="any" inputmode="decimal" aria-label="Vitesse, valeur exacte"><i>°/s</i></span></div>
+        <div class="cap">solide 1 / bâti 0, axe (A, z₀)</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="be">β</label><button data-k="be" data-d="-1" aria-label="Diminuer β">−</button><input id="be" type="range" min="0" max="359" step="1" value="35"><button data-k="be" data-d="1" aria-label="Augmenter β">+</button><button data-k="be" data-d="reset" aria-label="Valeur de départ de β">0</button><output id="bev"></output></div>
+        <div class="row v"><label for="vbe">β̇</label><button data-k="vbe" data-d="-5" aria-label="Diminuer la vitesse">−</button><input id="vbe" type="range" min="-180" max="180" step="5" value="0"><button data-k="vbe" data-d="5" aria-label="Augmenter la vitesse">+</button><button data-k="vbe" data-d="0" aria-label="Vitesse nulle">0</button><span class="nv"><input class="num" id="vben" type="number" step="any" inputmode="decimal" aria-label="Vitesse, valeur exacte"><i>°/s</i></span></div>
+        <div class="cap">solide 2 / solide 1, axe (B, x₁)</div>
+      </div>
+      <div class="grp">
+        <div class="row"><label for="la">λ</label><button data-k="la" data-d="-0.1" aria-label="Diminuer λ">−</button><input id="la" type="range" min="1.6" max="3.2" step="0.05" value="2.4"><button data-k="la" data-d="0.1" aria-label="Augmenter λ">+</button><button data-k="la" data-d="reset" aria-label="Valeur de départ de λ">↺</button><output id="lav"></output></div>
+        <div class="row v"><label for="vla">λ̇</label><button data-k="vla" data-d="-0.1" aria-label="Diminuer la vitesse">−</button><input id="vla" type="range" min="-1.5" max="1.5" step="0.1" value="0.4"><button data-k="vla" data-d="0.1" aria-label="Augmenter la vitesse">+</button><button data-k="vla" data-d="0" aria-label="Vitesse nulle">0</button><span class="nv"><input class="num" id="vlan" type="number" step="any" inputmode="decimal" aria-label="Vitesse, valeur exacte"><i>/s</i></span></div>
+        <div class="cap">BC = λ y₂, solide 3 / solide 2 (unité du dessin)</div>
+      </div>
+      <div class="actions"><button id="play" class="main" aria-pressed="false">Lancer</button><button id="view">Vue initiale</button></div>
+      <hr class="sep">
+      <div class="opts">
+        <label><input id="oAng" type="checkbox"> Mettre en évidence les angles</label>
+        <label><input id="oFull" type="checkbox"> Afficher les bases au complet</label>
+        <label><input id="oHide" type="checkbox"> Masquer les vecteurs de base</label>
+        <label><input id="oTr" type="checkbox" checked> Laisser la trace de C</label>
+        <label id="lV" hidden><input id="oV" type="checkbox"> Afficher les vitesses de C</label>
+        <div class="line2"><label><input id="oTint" type="checkbox"> Solides colorés</label><label><input id="oCont" type="checkbox"> Contours colorés</label></div>
+      </div>
+      <div class="actions"><button id="clr">Effacer la trace</button><button id="rst">Valeurs de la figure</button><button id="zero">Tout remettre à zéro</button></div>
+      <details class="dims"><summary>Dimensions des pièces</summary><div class="dim"><label for="d_a">a = AB</label><input id="d_a" type="range"><output id="d_av"></output></div><div class="dim"><label for="d_h">corps du vérin</label><input id="d_h" type="range"><output id="d_hv"></output></div><div class="dim"><label for="d_r">tige</label><input id="d_r" type="range"><output id="d_rv"></output></div><div class="dim"><label for="d_m">λ minimal</label><input id="d_m" type="range"><output id="d_mv"></output></div><div class="dim"><label for="d_M">λ maximal</label><input id="d_M" type="range"><output id="d_Mv"></output></div><div class="dim"><label for="d_n">trace (points)</label><input id="d_n" type="range"><output id="d_nv"></output></div><button id="dreset" class="lnk">Dimensions initiales</button></details>
+      <div class="read" id="rd"></div>
+      <div class="codeline"><button id="cbtn" class="lnk">Code enseignant</button><span id="cbox" hidden><input id="cin" type="password" placeholder="code" autocomplete="off" aria-label="Code enseignant"> <button id="cok">OK</button></span><button id="clock" class="lnk" hidden>Verrouiller</button></div>
+    </div>
+  </div>
+  <div class="info" id="info"></div>
+</main>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg", rad=Math.PI/180;
+  var svg=document.getElementById("fig");
+  var AL=1.6, HOUS=1.8, ROD=1.6, LMIN=1.6, LMAX=3.2, GZ=-1.6;     // a = AB, longueur du corps 2, de la tige 3, bornes de λ, hauteur du sol
+  var U=66, CX=320, CY=285, CEN=[0,0,0.8];
+  var VIEW0={az:45,el:30};
+  var view={az:VIEW0.az,el:VIEW0.el};
+  var LS=1, showV=false, hideB=false, full=false, angles=false, tint=false, contour=false, tracing=true;
+  var st={al:30,be:35,la:2.4}, sp={al:20,be:0,la:0.4}, trace=[], playing=false;
+  function f2(v){return v.toFixed(2).replace(".",",");}
+  function norm(v){return ((v%360)+360)%360;}
+  function cl(v,a,b){return Math.max(a,Math.min(b,v));}
+  function rnd(v){return Math.round(v*100)/100;}
+  // ---- projection orthographique : r (droite de l'écran), u (haut de l'écran), d (vers l'observateur) ----
+  function frame(){
+    var a=view.az*rad,e=view.el*rad;
+    return {r:[-Math.sin(a),Math.cos(a),0], u:[-Math.sin(e)*Math.cos(a),-Math.sin(e)*Math.sin(a),Math.cos(e)], d:[Math.cos(e)*Math.cos(a),Math.cos(e)*Math.sin(a),Math.sin(e)]};
+  }
+  var F=frame();
+  function dot3(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+  function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+  function add(a,b,k){k=k===undefined?1:k;return [a[0]+k*b[0],a[1]+k*b[1],a[2]+k*b[2]];}
+  function sc(a,k){return [a[0]*k,a[1]*k,a[2]*k];}
+  function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  function nrm(a){return Math.hypot(a[0],a[1],a[2]);}
+  function proj(p){var q=sub(p,CEN);return [CX+U*dot3(q,F.r), CY-U*dot3(q,F.u)];}
+
+  function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+  // étiquette : chaque vecteur a sa propre flèche qui couvre son nom complet, comme \vv{x_1} ; parts = [[lettre, indice] | "="]
+  function vlabel(parts,x,y,color0,anchor,layer){
+    var g=el("g",{},layer), items=[], cur=0;
+    parts.forEach(function(p){
+      var color=(p!=="="&&p[2])?p[2]:color0;
+      var t=el("text",{x:0,y:y,"font-size":19*LS},g);t.style.fill=color;
+      if(p==="="){t.textContent="=";}
+      else{var a=el("tspan",{"font-style":"italic"},t);a.textContent=p[0];
+           if(p[1]){var b=el("tspan",{"font-size":13*LS,dy:5*LS},t);b.textContent=p[1];}}
+      var w=t.getBBox().width, gap=(p==="=")?5:0;
+      items.push({t:t,w:w,x:cur+gap,eq:p==="=",c:color}); cur+=w+gap+(p==="="?5:0);
+    });
+    var off=anchor==="end"?-cur:anchor==="middle"?-cur/2:0;
+    items.forEach(function(it){
+      it.t.setAttribute("x",x+off+it.x);
+      if(!it.eq){var x0=x+off+it.x,x1=x0+it.w,ya=y-15*LS,hd=4.5*LS,hw=3.2*LS;
+        el("path",{d:"M"+x0+","+ya+"H"+x1+"M"+(x1-hd)+","+(ya-hw)+"L"+x1+","+ya+"L"+(x1-hd)+","+(ya+hw),stroke:it.c,"stroke-width":1.2,fill:"none"},g);}
+    });
+  }
+  function arrow(p,q,color,w,layer){
+    var a=proj(p),b=proj(q),dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);
+    if(L<2)return; var ux=dx/L,uy=dy/L,h=9;
+    el("line",{x1:a[0],y1:a[1],x2:b[0]-ux*h*0.6,y2:b[1]-uy*h*0.6,stroke:color,"stroke-width":w},layer);
+    el("path",{d:"M"+b[0]+","+b[1]+"L"+(b[0]-ux*h-uy*h*0.38)+","+(b[1]-uy*h+ux*h*0.38)+"L"+(b[0]-ux*h*0.65)+","+(b[1]-uy*h*0.65)+"L"+(b[0]-ux*h+uy*h*0.38)+","+(b[1]-uy*h-ux*h*0.38)+"Z",fill:color},layer);
+  }
+  function dot(p,color,r,layer){var a=proj(p);el("circle",{cx:a[0],cy:a[1],r:r,fill:color},layer);}
+  // cercle : la moitié éloignée de l'observateur est estompée (indice de profondeur)
+  function ring(center,u,v,R,color,w,layer){
+    var N=120,pts=[],dc=dot3(center,F.d),front="",back="",prevB=null;
+    for(var i=0;i<=N;i++){var t=i/N*2*Math.PI;pts.push(add(center,add(sc(u,R*Math.cos(t)),sc(v,R*Math.sin(t)))));}
+    for(var j=0;j<N;j++){
+      var m=add(pts[j],pts[j+1],1), isBack=dot3(m,F.d)/2<dc, a=proj(pts[j]),b=proj(pts[j+1]);
+      var seg="M"+a[0].toFixed(1)+","+a[1].toFixed(1)+"L"+b[0].toFixed(1)+","+b[1].toFixed(1);
+      if(isBack)back+=seg;else front+=seg;
+    }
+    el("path",{d:back,fill:"none",stroke:color,"stroke-width":w,opacity:.32},layer);
+    el("path",{d:front,fill:"none",stroke:color,"stroke-width":w,"stroke-linecap":"round"},layer);
+  }
+
+  function arcPts(c,u,v,R,deg){var a=[],n=40;for(var i=0;i<=n;i++){var t=deg*rad*i/n;a.push(add(c,add(sc(u,R*Math.cos(t)),sc(v,R*Math.sin(t)))));}return a;}
+  function pathOf(pts,close){var d="";pts.forEach(function(q,i){var s=proj(q);d+=(i?"L":"M")+s[0].toFixed(1)+","+s[1].toFixed(1);});return d+(close?"Z":"");}
+  // angle mis en évidence : secteur coloré + arc épais + nom
+  function angleMark(c,u,v,R,deg,name,col,gShape,gText){
+    var pts=arcPts(c,u,v,R,deg);
+    el("path",{d:pathOf([c].concat(pts),true),fill:col,"fill-opacity":.22,stroke:"none"},gShape);
+    el("path",{d:pathOf(pts),fill:"none",stroke:col,"stroke-width":2.8,"stroke-linecap":"round"},gShape);
+    // pointe de flèche à l'extrémité de l'arc : elle donne le sens positif de l'angle
+    if(Math.abs(deg)>1){var q=proj(pts[pts.length-1]),r=proj(pts[pts.length-4]),dx=q[0]-r[0],dy=q[1]-r[1],L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,h=11*LS;
+      el("path",{d:"M"+q[0]+","+q[1]+"L"+(q[0]-ux*h-uy*h*0.42)+","+(q[1]-uy*h+ux*h*0.42)+"L"+(q[0]-ux*h+uy*h*0.42)+","+(q[1]-uy*h-ux*h*0.42)+"Z",fill:col},gShape);}
+    var m=deg*rad/2,r2=R+0.32,s=proj(add(c,add(sc(u,r2*Math.cos(m)),sc(v,r2*Math.sin(m)))));
+    var t=el("text",{x:s[0],y:s[1]+7*LS,"font-size":23*LS,"font-style":"italic","text-anchor":"middle"},gText);t.style.fill=col;t.textContent=name;
+  }
+  function dashed(p,q,col,g){var a=proj(p),b=proj(q);el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:col,"stroke-width":1.4,"stroke-dasharray":"5 4"},g);}
+
+  var cs=function(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();};
+  // repères : R1 (z1 = z0), R2 (x2 = x1), B = A + a y1, C = B + λ y2
+  function geo(){
+    var a=st.al*rad,b=st.be*rad,z0=[0,0,1],x1=[Math.cos(a),Math.sin(a),0],y1=[-Math.sin(a),Math.cos(a),0];
+    var y2=add(sc(y1,Math.cos(b)),z0,Math.sin(b)), z2=add(sc(y1,-Math.sin(b)),z0,Math.cos(b));
+    var B=sc(y1,AL), C=add(B,y2,st.la);
+    return {z0:z0,x1:x1,y1:y1,y2:y2,z2:z2,A:[0,0,0],B:B,C:C};
+  }
+  function ln3(p,q,w,c,g,op){var a=proj(p),b=proj(q);el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:c,"stroke-width":w,"stroke-linecap":"round",opacity:op===undefined?1:op},g);}
+  function draw(){
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var ink=cs("--ink"),red=cs("--red"),blue=cs("--blue"),green=cs("--green"),gray=cs("--plateau"),tr=cs("--trace"),panel=cs("--panel");
+    U=66*Math.min(1,5.7/(AL+LMAX+0.9));st.la=cl(st.la,LMIN,LMAX);
+    var G=geo(),O=G.A,B=G.B,C=G.C,AR=hideB?function(){}:arrow;
+    var back=el("g",{}),angG=el("g",{}),ax=el("g",{}),lab=el("g",{});
+    // barre : trait encre par défaut ; teinte atténuée de la couleur de la base du solide et / ou contour coloré en tube
+    function solid(p,q,col,w,g){
+      if(!tint&&!contour){ln3(p,q,w,ink,g);return;}
+      var W=w*2+1;
+      if(contour){ln3(p,q,W,col,g);ln3(p,q,W-4,panel,g);}
+      if(tint)ln3(p,q,contour?W-4:W,col,g,.3);
+      ln3(p,q,2.6,ink,g);
+    }
+    // bâti 0 : sol et fût
+    var gp=[0,0,GZ];ring(gp,[1,0,0],[0,1,0],0.9,gray,1.6,back);
+    solid(gp,O,ink,5,back);
+    // trace de C
+    if(trace.length>1){var d="";trace.forEach(function(p,i){var s=proj(p);d+=(i?"L":"M")+s[0].toFixed(1)+","+s[1].toFixed(1);});
+      el("path",{d:d,fill:"none",stroke:tr,"stroke-width":1.8,"stroke-linejoin":"round"},back);}
+    // solide 1 : bras AB ; axe de la liaison en B ; solide 2 : corps du vérin ; solide 3 : tige et pince
+    solid(O,B,red,7,back);
+    ln3(add(B,G.x1,-0.22),add(B,G.x1,0.22),9,gray,back,.8);
+    solid(B,add(B,G.y2,HOUS),blue,11,back);
+    solid(add(B,G.y2,st.la-ROD),C,green,4.5,back);
+    ln3(add(C,G.x1,-0.2),add(C,G.x1,0.2),3,ink,back);
+    ln3(add(C,G.x1,-0.2),add(add(C,G.x1,-0.2),G.y2,0.2),3,ink,back);ln3(add(C,G.x1,0.2),add(add(C,G.x1,0.2),G.y2,0.2),3,ink,back);
+    // angles
+    if(angles){
+      dashed(O,add(O,[1,0,0],1.9),red,angG);
+      angleMark(O,[1,0,0],[0,1,0],0.9,st.al,"α",red,angG,lab);                 // entre R0 et R1 : couleur de R1
+      dashed(B,add(B,G.y1,1.3),blue,angG);
+      angleMark(B,G.y1,G.z0,0.8,st.be,"β",blue,angG,lab);                      // entre R1 et R2 : couleur de R2
+    }
+    // bases
+    AR(O,[1.5,0,0],ink,1.8,ax);AR(O,[0,1.5,0],ink,1.8,ax);AR(O,[0,0,1.2],ink,1.8,ax);
+    AR(O,sc(G.x1,1.5),red,1.8,ax);AR(O,sc(G.y1,1.5),red,1.8,ax);
+    AR(B,add(B,G.x1,1.2),red,1.8,ax);AR(B,add(B,G.y2,st.la+0.9),blue,1.8,ax);
+    if(full)AR(B,add(B,G.z2,1.2),blue,1.8,ax);
+    // vitesses de C (échelle arbitraire) : V(C∈3/2) = λ̇ y₂, V(C∈2/1) = β̇ x₁ ∧ BC, V(C∈1/0) = α̇ z₀ ∧ AC, somme = V(C∈3/0)
+    var rd="";
+    function side(p,from){var s=proj(p),f=proj(from);return s[0]-f[0]>=0?1:-1;}
+    function lbl(parts,p,color,dx,dy){var s=proj(p);var right=dx>=0;vlabel(parts,s[0]+(right?9:-9),s[1]+dy,color,right?"start":"end",lab);}
+    var LB=hideB?function(){}:lbl;
+    if(showV){
+      var v32=sc(G.y2,sp.la),v21=cross(sc(G.x1,sp.be*rad),sc(G.y2,st.la)),v10=cross(sc(G.z0,sp.al*rad),C),v30=add(add(v32,v21),v10);
+      [[v32,green,"3/2"],[v21,blue,"2/1"],[v10,red,"1/0"],[v30,tr,"3/0"]].forEach(function(it,i){
+        if(nrm(it[0])<0.04)return;var tipV=add(C,it[0]);arrow(C,tipV,it[1],i===3?2.4:1.8,ax);
+        lbl([["V",it[2]]],tipV,it[1],side(tipV,C),i===3?-6:6);});
+      rd="Vitesses de C dessinées à une échelle arbitraire : V(C∈3/2) en vert, V(C∈2/1) en bleu, V(C∈1/0) en rouge, V(C∈3/0) en orange.";
+    }
+    dot(O,ink,3.2,ax);dot(B,ink,3.2,ax);dot(C,ink,3.2,ax);
+    // étiquettes de vecteurs
+    var tip;
+    tip=[1.5,0,0];LB([["x","0"]],tip,ink,side(tip,O),18);
+    tip=[0,1.5,0];LB([["y","0"]],tip,ink,side(tip,O),18);
+    tip=[0,0,1.2];LB(full?[["z","0"],"=",["z","1",red]]:[["z","0"]],tip,ink,1,6);
+    tip=sc(G.x1,1.5);LB([["x","1"]],tip,red,side(tip,O),20);
+    tip=sc(G.y1,1.5);LB([["y","1"]],tip,red,side(tip,O),20);
+    tip=add(B,G.x1,1.2);LB([["x","1"],"=",["x","2",blue]],tip,red,side(tip,B),8);
+    tip=add(B,G.y2,st.la+0.9);LB([["y","2"]],tip,blue,side(tip,B),-6);
+    if(full){tip=add(B,G.z2,1.2);LB([["z","2"]],tip,blue,side(tip,B),6);}
+    function txt(str,p,dx,dy,an){var s=proj(p),t=el("text",{x:s[0]+dx,y:s[1]+dy,"font-size":19*LS,"font-style":"italic","text-anchor":an||"start"},lab);t.textContent=str;}
+    txt("A",O,-12,-8,"end");txt("B",B,-12,-8,"end");txt("C",C,10,-6,"start");
+    function circ(num,p,dx,dy){var s=proj(p);el("circle",{cx:s[0]+dx,cy:s[1]+dy,r:9*LS,fill:panel,stroke:ink,"stroke-width":1.2},lab);
+      var t=el("text",{x:s[0]+dx,y:s[1]+dy+5*LS,"font-size":13*LS,"text-anchor":"middle"},lab);t.textContent=num;}
+    circ("0",[0,0,GZ*0.5],22,0);circ("1",add(O,G.y1,AL*0.5),0,22);circ("2",add(B,G.y2,HOUS*0.5),24,0);circ("3",add(B,G.y2,st.la-ROD*0.4),-24,0);
+    document.getElementById("rd").textContent=rd;
+    document.getElementById("alv").textContent=(Math.round(st.al)%360)+"°";document.getElementById("al").value=Math.round(st.al)%360;
+    setNum("valn",sp.al);
+    document.getElementById("bev").textContent=(Math.round(st.be)%360)+"°";document.getElementById("be").value=Math.round(st.be)%360;
+    setNum("vben",sp.be);
+    document.getElementById("lav").textContent=f2(st.la);document.getElementById("la").value=st.la;
+    setNum("vlan",sp.la);document.getElementById("vla").value=sp.la;
+  }
+  function pushTrace(){if(!tracing)return;var C=geo().C,l=trace[trace.length-1];
+    if(!l||nrm(sub(l,C))>0.03){trace.push(C);if(trace.length>TRMAX)trace.shift();}}
+  // vitesse saisie à la main : toute valeur est acceptée (le curseur reste limité, mais pas la valeur)
+  function setNum(id,v){var i=document.getElementById(id);if(i&&document.activeElement!==i)i.value=String(Math.round(v*1000)/1000);}
+  function bindNum(keys){keys.forEach(function(k){var n=document.getElementById("v"+k+"n");
+    n.addEventListener("input",function(){var v=parseFloat(n.value.replace(",","."));if(isFinite(v)){sp[k]=v;document.getElementById("v"+k).value=v;draw();}});
+    n.addEventListener("blur",function(){setNum("v"+k+"n",sp[k]);});});}
+  function update(){pushTrace();draw();}
+
+  ["al","be"].forEach(function(k){
+    document.getElementById(k).addEventListener("input",function(e){st[k]=norm(+e.target.value);update();});
+    document.getElementById("v"+k).addEventListener("input",function(e){sp[k]=+e.target.value;draw();});});
+  document.getElementById("la").addEventListener("input",function(e){st.la=+e.target.value;update();});
+  document.getElementById("vla").addEventListener("input",function(e){sp.la=+e.target.value;draw();});
+  document.querySelectorAll(".row button").forEach(function(b){b.addEventListener("click",function(){
+    var k=b.dataset.k,d=b.dataset.d;
+    if(k==="al"||k==="be"){st[k]=d==="reset"?0:norm(Math.round(st[k])+(+d));update();}
+    else if(k==="la"){st.la=d==="reset"?2.4:rnd(cl(st.la+(+d),LMIN,LMAX));update();}
+    else if(k==="val"||k==="vbe"){var kk=k.slice(1);sp[kk]=+d===0?0:sp[kk]+(+d);draw();}
+    else if(k==="vla"){sp.la=+d===0?0:rnd(sp.la+(+d));draw();}
+  });});
+  [["oAng","angles"],["oFull","full"],["oTint","tint"],["oCont","contour"]].forEach(function(o){
+    document.getElementById(o[0]).addEventListener("change",function(e){
+      if(o[1]==="angles")angles=e.target.checked;else if(o[1]==="full")full=e.target.checked;else if(o[1]==="tint")tint=e.target.checked;else contour=e.target.checked;draw();});});
+  document.getElementById("oTr").addEventListener("change",function(e){tracing=e.target.checked;if(tracing)pushTrace();draw();});
+  document.getElementById("clr").addEventListener("click",function(){trace=[];pushTrace();draw();});
+  document.getElementById("view").addEventListener("click",function(){view={az:VIEW0.az,el:VIEW0.el};F=frame();draw();});
+
+  var last=0,raf=null,playBtn=document.getElementById("play");
+  function setPlay(on){playing=on;playBtn.setAttribute("aria-pressed",on?"true":"false");playBtn.textContent=on?"Pause":"Lancer";playBtn.classList.toggle("main",!on);
+    if(on&&!raf){last=performance.now();raf=requestAnimationFrame(loop);}}
+  function loop(ts){var dt=Math.min(0.05,(ts-last)/1000);last=ts;if(!playing){raf=null;return;}
+    st.al=norm(st.al+sp.al*dt);st.be=norm(st.be+sp.be*dt);
+    st.la+=sp.la*dt;if(st.la>LMAX){st.la=LMAX;sp.la=-sp.la;}else if(st.la<LMIN){st.la=LMIN;sp.la=-sp.la;}   // la tige va et vient entre les butées
+    update();raf=requestAnimationFrame(loop);}
+  playBtn.addEventListener("click",function(){setPlay(!playing);});
+  document.getElementById("rst").addEventListener("click",function(){setPlay(false);st={al:30,be:35,la:2.4};trace=[];pushTrace();draw();});
+  document.getElementById("zero").addEventListener("click",function(){setPlay(false);st={al:0,be:0,la:2.4};sp={al:0,be:0,la:0};
+    view={az:VIEW0.az,el:VIEW0.el};F=frame();trace=[];pushTrace();draw();});
+
+  // ---- point de vue : glisser pour tourner autour de la figure ----
+  var drag=null;
+  svg.addEventListener("pointerdown",function(e){drag={x:e.clientX,y:e.clientY};svg.setPointerCapture(e.pointerId);svg.classList.add("drag");});
+  svg.addEventListener("pointermove",function(e){
+    if(!drag)return;
+    view.az-= (e.clientX-drag.x)*0.45; view.el=Math.max(-89,Math.min(89,view.el+(e.clientY-drag.y)*0.45));
+    drag={x:e.clientX,y:e.clientY};F=frame();draw();
+  });
+  function endDrag(){drag=null;svg.classList.remove("drag");}
+  svg.addEventListener("pointerup",endDrag);svg.addEventListener("pointercancel",endDrag);
+
+  if(window.matchMedia)window.matchMedia("(prefers-color-scheme: dark)").addEventListener&&window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+  // ---- taille de l'affichage : automatique d'après l'écran, réglable par A− / A+ (mémorisée sur l'appareil) ----
+
+  // ---- options réservées à l'enseignant : le code est comparé par empreinte (il n'apparaît pas en clair dans la page) ----
+  // Pour changer le code : ouvrir la console du navigateur, taper codeHash("nouveau code") et remplacer la valeur de CODE_H.
+  var CODE_H=433024637;
+  function codeHash(s){var h=5381,i;for(i=0;i<s.length;i++)h=(((h*33)^s.charCodeAt(i))>>>0);return h;}
+  window.codeHash=codeHash;
+  var unlocked=false;try{unlocked=localStorage.getItem("anim-code")===String(CODE_H);}catch(e){}
+  function applyLock(){
+    document.getElementById("lV").hidden=!unlocked;document.getElementById("clock").hidden=!unlocked;document.getElementById("cbtn").hidden=unlocked;
+    if(unlocked)document.getElementById("cbox").hidden=true;
+    if(!unlocked){showV=false;document.getElementById("oV").checked=false;}
+    draw();}
+  document.getElementById("cbtn").addEventListener("click",function(){var b=document.getElementById("cbox");b.hidden=!b.hidden;if(!b.hidden)document.getElementById("cin").focus();});
+  function tryCode(){var i=document.getElementById("cin");
+    if(codeHash(i.value)===CODE_H){unlocked=true;try{localStorage.setItem("anim-code",String(CODE_H));}catch(e){}i.value="";applyLock();}
+    else{i.value="";i.placeholder="code incorrect";}}
+  document.getElementById("cok").addEventListener("click",tryCode);
+  document.getElementById("cin").addEventListener("keydown",function(e){if(e.key==="Enter")tryCode();});
+  document.getElementById("clock").addEventListener("click",function(){unlocked=false;try{localStorage.removeItem("anim-code");}catch(e){}applyLock();});
+  document.getElementById("oV").addEventListener("change",function(e){showV=e.target.checked;draw();});
+  document.getElementById("oHide").addEventListener("change",function(e){hideB=e.target.checked;var f=document.getElementById("oFull");f.disabled=hideB;draw();});
+
+  // ---- dimensions des pièces : partie repliée, modifiable par l'utilisateur (unité du dessin) ----
+  var TRMAX=8000;
+  function dimsSetup(DIMS,after){
+    var fd=function(v,d){return d&&d.int?String(Math.round(v)):v.toFixed(2).replace(".",",");};
+    DIMS.forEach(function(d){var i=document.getElementById("d_"+d.id),o=document.getElementById("d_"+d.id+"v");
+      i.min=d.min;i.max=d.max;i.step=d.step;i.value=d.def;o.textContent=fd(d.def,d);d.set(d.def);
+      i.addEventListener("input",function(){var v=+i.value;d.set(v);o.textContent=fd(v,d);after(d);});});
+    document.getElementById("dreset").addEventListener("click",function(){DIMS.forEach(function(d){
+      document.getElementById("d_"+d.id).value=d.def;document.getElementById("d_"+d.id+"v").textContent=fd(d.def,d);d.set(d.def);});after(null);});
+  }
+
+  var KEY="bras-zoom", Z=1, manual=null;
+  try{var sv=parseFloat(localStorage.getItem(KEY));if(sv>0)manual=sv;}catch(e){}
+  function autoZoom(){
+    var touch=window.matchMedia("(hover:none) and (pointer:coarse)").matches, w=window.innerWidth, h=window.innerHeight;
+    if(!touch||h<w)return 1;                              // portrait tactile seulement
+    var ref=Math.min(screen.width||w,screen.height||w);   // largeur physique de l'écran, en px CSS
+    if(w>ref*1.25)return Math.min(3,w/ref);               // page rendue plus large que l'écran, donc réduite
+    if(w>420&&w<=600)return w/412;
+    return 1;
+  }
+  function applyZoom(){
+    Z=manual!==null?manual:autoZoom(); Z=Math.max(0.8,Math.min(3,Z));
+    document.documentElement.style.setProperty("--z",Z.toFixed(2));
+    LS=Math.min(1.5,1+(Z-1)*0.35);
+    document.getElementById("info").textContent="Affichage ×"+Z.toFixed(2).replace(".",",")+(manual===null?" (auto)":"")+" · page "+window.innerWidth+" px, écran "+(screen.width||"?")+" px, densité "+(window.devicePixelRatio||1);
+    draw();
+  }
+  function setManual(v){manual=v;try{if(v===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,v);}catch(e){}applyZoom();}
+  document.getElementById("zp").addEventListener("click",function(){setManual(Math.min(3,Math.round((Z+0.15)*100)/100));});
+  document.getElementById("zm").addEventListener("click",function(){setManual(Math.max(0.8,Math.round((Z-0.15)*100)/100));});
+  document.getElementById("za").addEventListener("click",function(){setManual(null);});
+  window.addEventListener("resize",function(){if(manual===null)applyZoom();});
+  var mq=window.matchMedia("(max-width:780px), (hover:none) and (pointer:coarse)");
+  function vb(){svg.setAttribute("viewBox",mq.matches?"50 50 540 480":"0 0 640 560");}
+  if(mq.addEventListener)mq.addEventListener("change",vb);vb();
+  function brasAfter(){LMIN=ROD;LMAX=HOUS+ROD-0.2;var la=document.getElementById("la");la.min=LMIN;la.max=LMAX;st.la=cl(st.la,LMIN,LMAX);trace=[];pushTrace();draw();}
+  var LMINs=1.6,LMAXs=3.2;
+  function brasAfter(d){if(d&&d.keep){while(trace.length>TRMAX)trace.shift();draw();return;}LMIN=Math.min(LMINs,LMAXs);LMAX=Math.max(LMINs,LMAXs);var la=document.getElementById("la");la.min=LMIN;la.max=LMAX;st.la=cl(st.la,LMIN,LMAX);trace=[];pushTrace();draw();}
+  dimsSetup([{id:"a",min:0,max:4,step:0.05,def:1.6,set:function(v){AL=v;}},{id:"h",min:0,max:4,step:0.05,def:1.8,set:function(v){HOUS=v;}},{id:"r",min:0,max:4,step:0.05,def:1.6,set:function(v){ROD=v;}},{id:"m",min:0,max:6,step:0.05,def:1.6,set:function(v){LMINs=v;}},{id:"M",min:0,max:6,step:0.05,def:3.2,set:function(v){LMAXs=v;}},{id:"n",min:500,max:50000,step:500,def:8000,int:true,keep:true,set:function(v){TRMAX=v;}}],brasAfter);
+  brasAfter();
+  bindNum(["al","be","la"]);
+  // plein écran (API native si disponible, sinon figure plaquée sur toute la fenêtre) + compteur de points de la trace
+  (function(){var fg=document.querySelector(".fig"),fb=document.getElementById("fsb"),fp=document.getElementById("fsplay"),pl=document.getElementById("play"),pseudo=false;
+    function isFs(){return fg.classList.contains("fs");}
+    function setFs(on){fg.classList.toggle("fs",on);fb.textContent=on?"Quitter":"Plein écran";document.body.style.overflow=on?"hidden":"";syncPlay();}
+    function syncPlay(){fp.textContent=pl.textContent;}
+    fb.addEventListener("click",function(){
+      if(isFs()){if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}setFs(false);return;}
+      var rq=fg.requestFullscreen||fg.webkitRequestFullscreen;setFs(true);
+      if(rq){try{var r=rq.call(fg);if(r&&r.catch)r.catch(function(){});}catch(e){}}});
+    function onChange(){if(!document.fullscreenElement&&!document.webkitFullscreenElement&&isFs()&&fg.dataset.api==="1"){fg.dataset.api="";setFs(false);}else if(document.fullscreenElement||document.webkitFullscreenElement){fg.dataset.api="1";}}
+    document.addEventListener("fullscreenchange",onChange);document.addEventListener("webkitfullscreenchange",onChange);
+    document.addEventListener("keydown",function(e){if(e.key==="Escape"&&isFs()&&!document.fullscreenElement&&!document.webkitFullscreenElement)setFs(false);});
+    fp.addEventListener("click",function(){pl.click();syncPlay();});
+    new MutationObserver(syncPlay).observe(pl,{childList:true,characterData:true,subtree:true});
+    var tc=document.getElementById("tcount"),ot=document.getElementById("oTr"),dr=draw;
+    draw=function(){dr();tc.textContent=(ot&&ot.checked)?"Trace : "+trace.length+" / "+TRMAX+" points":"";};
+  })();
+  pushTrace();applyZoom();applyLock();
+})();
+</script>
+
+</body></html>
