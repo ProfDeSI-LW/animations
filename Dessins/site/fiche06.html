@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="fr" data-fiche="fiche06">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bride de serrage</title>
+<meta name="description" content="Fiche 6 de dessin technique : Bride de serrage. Vues en projection européenne, traits de construction au survol et pièce en 3D.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout : atelier de dessin — bandeau d'outils, feuille blanche à gauche, liste des éléments à droite,
+   pièce en 3D en dessous. La feuille et la 3D restent blanches dans les deux thèmes (c'est du papier). */
+:root{
+  --bg:#eef0ee; --surface:#ffffff; --fg:#1c2421; --muted:#5d6b65; --line:#cdd4d0;
+  --hl:#e07800; --hl-soft:#fde9cf; --chip:#e3e8e5;
+  --paper:#ffffff; --ink:#141414; --constr:#9ea7a3;
+  --rouge:#d01e1e; --bleu:#1565c0;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151a18; --surface:#1e2522; --fg:#e7ece9; --muted:#9fada7; --line:#33403b;
+  --hl:#ff9a2e; --hl-soft:#3a2a17; --chip:#2a3330; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151a18; --surface:#1e2522; --fg:#e7ece9; --muted:#9fada7; --line:#33403b;
+  --hl:#ff9a2e; --hl-soft:#3a2a17; --chip:#2a3330; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+nav.crumb{font-size:.85rem;color:var(--muted)} nav.crumb a{color:inherit}
+.topbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+nav.pager{display:flex;flex-wrap:wrap;gap:8px;font-size:.88rem}
+nav.pager a,nav.pager span{display:inline-flex;align-items:center;gap:.4em;padding:5px 11px;border:1px solid var(--line);
+  border-radius:999px;color:inherit;text-decoration:none;background:var(--surface);max-width:100%}
+nav.pager a:hover,nav.pager a:focus-visible{border-color:currentColor}
+nav.pager span{opacity:.4}
+nav.pager b{font-weight:600}
+nav.pager.bas{justify-content:space-between;margin-top:4px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+h1{font-family:var(--f-display);font-weight:700;font-size:2.1rem;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1;text-wrap:balance}
+h1 span{color:var(--muted);font-weight:600}
+.sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.tools{display:flex;flex-wrap:wrap;gap:12px 20px}
+.seg{display:flex;flex-direction:column;gap:4px}
+.seg-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.seg-btns{display:flex;flex-wrap:wrap;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
+.seg-btns button{font:inherit;font-weight:500;border:0;background:transparent;color:var(--fg);padding:5px 12px;border-radius:6px;cursor:pointer}
+.seg-btns button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgb(0 0 0/.15);color:var(--hl)}
+button:focus-visible,input:focus-visible,li:focus-visible{outline:2px solid var(--hl);outline-offset:2px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:minmax(0,1fr)}}
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px;min-width:0}
+.sheet svg{display:block;width:100%;height:auto;max-height:78vh;touch-action:manipulation}
+aside{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:600;font-size:1.15rem;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.hint{color:var(--muted);font-size:.86rem;margin:0 0 10px}
+ul.els{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+ul.els li{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:7px 8px;border-radius:6px;cursor:pointer}
+ul.els li .dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--fg);margin-top:5px}
+ul.els li.rouge .dot{border-color:var(--rouge)} ul.els li.bleu .dot{border-color:var(--bleu)}
+ul.els li b{font-weight:600;display:block}
+ul.els li small{color:var(--muted);font-size:.8rem;display:block}
+ul.els li:hover,ul.els li.active{background:var(--hl-soft)}
+ul.els li.active .dot{background:var(--hl);border-color:var(--hl)}
+ul.els li.pinned b::after{content:" · épinglé";color:var(--hl);font-weight:500;font-size:.8rem}
+.legend{display:grid;grid-template-columns:44px 1fr;gap:6px 10px;align-items:center;font-size:.86rem}
+.legend svg{width:44px;height:8px;background:var(--paper);border-radius:2px}
+/* légende des traits : petite liste rétractable dans le bandeau d'outils */
+details.pop{position:relative}
+details.pop summary{list-style:none;font:inherit;font-family:var(--f-body);font-size:.95rem;font-weight:500;text-transform:none;letter-spacing:0;
+  background:var(--chip);border-radius:8px;padding:8px 12px}
+details.pop summary::-webkit-details-marker{display:none}
+details.pop summary::after{content:" ▾";color:var(--muted)}
+details.pop[open] summary::after{content:" ▴"}
+.pop-body{position:absolute;z-index:5;right:0;top:calc(100% + 6px);width:min(300px,calc(100vw - 40px));background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:12px;box-shadow:0 6px 18px rgb(0 0 0/.15)}
+details summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1.15rem;text-transform:uppercase;letter-spacing:.04em}
+.dims{display:grid;grid-template-columns:1fr 76px;gap:6px 10px;margin-top:10px;align-items:center;font-size:.88rem}
+.dims input{width:100%;font:inherit;font-variant-numeric:tabular-nums;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg);text-align:right}
+.dims .grp{grid-column:1/-1;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:6px}
+.warn{color:var(--rouge);font-size:.84rem;margin:8px 0 0}
+.reset{margin-top:10px;font:inherit;font-weight:500;border:1px solid var(--line);background:var(--chip);color:var(--fg);padding:5px 12px;border-radius:6px;cursor:pointer}
+.consigne{font-size:.95rem} .consigne p{margin:.3em 0}
+/* ---- dessin (couleurs du papier, fixes) ---- */
+#dwg .ink *{fill:none;stroke:var(--ink)}
+#dwg .vu{stroke-width:calc(.5px * var(--sk,1));stroke-linecap:round;stroke-linejoin:round}
+#dwg .cache{stroke-width:calc(.3px * var(--sk,1));stroke-linecap:butt}
+#dwg .axe{stroke-width:calc(.25px * var(--sk,1));stroke-linecap:butt}
+#dwg .fin{stroke-width:calc(.18px * var(--sk,1))}
+#dwg .hach{stroke-width:calc(.15px * var(--sk,1))}
+#dwg .ink polygon.ah{fill:var(--ink);stroke:none}
+#dwg .el.rouge .ink polygon.ah{fill:var(--rouge)} #dwg .el.bleu .ink polygon.ah{fill:var(--bleu)}
+#dwg .el.active .ink polygon.ah{fill:var(--hl)}
+#dwg .rep{stroke-width:calc(.75px * var(--sk,1));stroke-linecap:round}
+#dwg .el.rouge .ink *{stroke:var(--rouge)} #dwg .el.bleu .ink *{stroke:var(--bleu)}
+#dwg .el.rouge .ink circle.pt{fill:var(--rouge)} #dwg .el.bleu .ink circle.pt{fill:var(--bleu)}
+#dwg .hit *{fill:none;stroke:transparent;stroke-width:calc(3.5px * var(--sk,1));pointer-events:stroke}
+#dwg .el{cursor:pointer;transition:opacity .15s}
+#dwg .cons{display:none;pointer-events:none}
+#dwg .cons *{fill:none;stroke:var(--constr);stroke-width:calc(.15px * var(--sk,1))}
+#dwg.c-always .cons{display:inline}
+#dwg.c-hover .cons.active{display:inline}
+#dwg .cons.active *{stroke:var(--hl);stroke-width:calc(.22px * var(--sk,1))}
+#dwg.has-active .el:not(.active){opacity:.22}
+#dwg .el.active .ink *{stroke:var(--hl)}
+#dwg .el.active .ink circle.pt{fill:var(--hl)}
+#dwg text{fill:var(--ink);font-family:var(--f-body);font-size:calc(3.2px * var(--sk,1));pointer-events:none}
+#dwg text.t{font-size:calc(3.6px * var(--sk,1));font-weight:600}
+#dwg text.lt{font-size:calc(5px * var(--sk,1));font-weight:700;text-anchor:middle}
+#dwg g.num circle{fill:#fff;stroke:var(--ink);stroke-width:calc(.2px * var(--sk,1))}
+#dwg g.num text{font-size:calc(2.8px * var(--sk,1));font-weight:600;text-anchor:middle;dominant-baseline:central}
+@media (prefers-reduced-motion:reduce){#dwg .el{transition:none}}
+/* ---- pièce en 3D ---- */
+.v3head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;margin-bottom:6px}
+.v3head h2{margin:0}
+.v3ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.chk{display:flex;align-items:center;gap:6px;font-size:.9rem;cursor:pointer}
+.chk input{accent-color:var(--hl);width:16px;height:16px}
+.v3d{position:relative;height:min(68vh,500px);min-height:300px;background:var(--paper);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.v3d canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.v3d canvas:active{cursor:grabbing}
+.v3d p{position:absolute;inset:auto 12px 12px 12px;margin:0;color:#5d6b65;font-size:.9rem}
+.v3d .lab{position:absolute;transform:translate(-50%,-50%);pointer-events:none;font:600 12px/1 var(--f-body);
+  color:#141414;background:#fff;border:1px solid #141414;border-radius:50%;width:18px;height:18px;display:grid;place-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <nav class="crumb"><a href="index.html">Cahier de dessin technique</a> › fiche 6</nav>
+    <nav class="pager" aria-label="Fiche précédente ou suivante"><a href="fiche05.html" rel="prev" title="Fiche précédente">← <b>5.</b> Porte-outil</a><a href="fiche07.html" rel="next" title="Fiche suivante"><b>7.</b> Vé de serrage →</a></nav>
+  </div>
+  <header>
+    <div>
+      <h1>6. Bride de serrage <span id="sheetTag">— corrigé</span></h1>
+      <p class="sub">Survolez un trait, une face de la pièce en 3D ou un élément de la liste : ses traits s’allument dans toutes les vues avec leurs traits de construction. Un clic épingle l’élément.</p>
+    </div>
+    <div class="tools">
+      <div class="seg"><span class="seg-label">Feuille</span>
+        <div class="seg-btns" id="segSheet">
+          <button type="button" data-v="enonce" aria-pressed="false">Énoncé</button>
+          <button type="button" data-v="corrige" aria-pressed="true">Corrigé</button>
+        </div></div>
+      <div class="seg"><span class="seg-label">Traits de construction</span>
+        <div class="seg-btns" id="segCons">
+          <button type="button" data-v="hover" aria-pressed="true">Au survol</button>
+          <button type="button" data-v="always" aria-pressed="false">Toujours</button>
+          <button type="button" data-v="never" aria-pressed="false">Masqués</button>
+        </div></div>
+      <div class="seg"><span class="seg-label">Légende</span>
+        <details class="pop"><summary>Types de traits</summary>
+          <div class="pop-body"><div class="legend" id="legend"></div></div>
+        </details></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="sheet"><svg id="dwg" class="c-hover" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vues en projection européenne de la pièce"></svg></div>
+    <aside>
+      <div class="panel">
+        <details open id="elsBox">
+          <summary>Éléments de la pièce</summary>
+          <p class="hint">Projection européenne, cotes en millimètres. Repliez cette liste pour garder les cotes près du dessin.</p>
+          <ul class="els" id="elList"></ul>
+        </details>
+      </div>
+      <div class="panel">
+        <details>
+          <summary>Cotes de la pièce (mm)</summary>
+          <div class="dims" id="dims"></div>
+          <p class="warn" id="warn" hidden></p>
+          <button type="button" class="reset" id="reset">Revenir aux cotes de la fiche</button>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <section class="panel">
+    <div class="v3head">
+      <h2>Pièce en 3D</h2>
+      <div class="v3ctl">
+        <div class="seg-btns" id="segView" aria-label="Points de vue"></div>
+        <label class="chk" for="hidChk"><input type="checkbox" id="hidChk" checked> Arêtes cachées en pointillés</label>
+        <label class="chk" for="tanChk"><input type="checkbox" id="tanChk"> Raccords tangents (trait gris)</label>
+        <label class="chk" for="axChk"><input type="checkbox" id="axChk" checked> Axes (trait mixte)</label>
+        <label class="chk" for="labChk" id="labLab" hidden><input type="checkbox" id="labChk" checked> Repères des points</label>
+        <label class="chk" for="sawChk" id="sawLab" hidden><input type="checkbox" id="sawChk" checked> Scie</label>
+        <label class="chk" for="cutChk" id="cutLab" hidden><input type="checkbox" id="cutChk"> Pièce coupée</label>
+      </div>
+    </div>
+    <p class="hint">Faites glisser pour tourner la pièce, molette ou pincement pour zoomer. Les boutons placent l’œil exactement comme pour chaque vue du dessin : les pointillés de la 3D retrouvent alors ceux de la vue.</p>
+    <div class="v3d" id="v3d"><p id="v3dMsg" hidden>La vue 3D n’a pas pu se charger (pas de connexion à Internet ?). Le reste de la page fonctionne.</p></div>
+  </section>
+
+  <section class="panel consigne">
+    <h2>Consigne de la fiche</h2>
+    <p><b>Données :</b> la vue de face, la vue de dessus incomplètes, l’amorce de la vue de droite d’une bride de serrage.</p><p><b>Exercice :</b> 1) Esquisser le rectangle capable de la vue de droite. 2) Esquisser les détails sur toutes les vues. 3) Faire la mise au net. 4) Repasser en couleur l’arête repérée sur la perspective.</p>
+  </section>
+  <nav class="pager bas" aria-label="Fiche précédente ou suivante"><a href="fiche05.html" rel="prev" title="Fiche précédente">← <b>5.</b> Porte-outil</a><a href="fiche07.html" rel="next" title="Fiche suivante"><b>7.</b> Vé de serrage →</a></nav>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+// =====================================================================
+// Définition de la pièce (variables, vues, solide 3D)
+// =====================================================================
+const PIECE = (() => {
+// 6. BRIDE DE SERRAGE
+// Repère : x longueur, y profondeur (0 à l'arrière), z hauteur ; origine sous le talon, à l'arrière gauche.
+// Feuille : vue de droite à GAUCHE de la vue de face, vue de dessus en dessous.
+return {
+  side: "droite",
+  defaults: {Long:180, Prof:100, Haut:80, zBr:20, xTa:38, Rcg:20, Ch:45, xBi:115, yBi:20, xLa:75, xLb:138, rLu:16},
+  dims: [["Bloc",null],["Long","Longueur"],["Prof","Largeur"],["Haut","Hauteur"],
+         ["Talon",null],["zBr","Hauteur du talon"],["xTa","Longueur du talon"],["Rcg","Rayon du congé"],["Ch","Chanfrein 45°"],
+         ["Bout du bras",null],["xBi","Début des biseaux"],["yBi","Retrait des biseaux"],
+         ["Lumière",null],["xLa","Centre gauche (x)"],["xLb","Centre droit (x)"],["rLu","Rayon"]],
+  elements: [
+    {id:"bloc", name:"Contour de la bride", info:"Rectangle capable des trois vues"},
+    {id:"talon",name:"Talon et congé", info:"Le congé se raccorde tangentiellement au dessous du bras"},
+    {id:"chanf",name:"Chanfrein 45°", info:"Au-dessus du talon, vu de face en vraie grandeur"},
+    {id:"bis",  name:"Biseaux du bout", info:"Deux faces verticales inclinées, vues de dessus"},
+    {id:"lum",  name:"Lumière oblongue", info:"Traversante, cachée de face et de droite"},
+    {id:"rouge",name:"Arête face avant ∩ biseau", info:"Droite verticale", color:"rouge"}],
+  derive(p){
+    const d = {...p, EcG:25, EcD:26, Deb:4, AmH:.69, AmP:.74};
+    d.zCh = p.Haut-p.Ch; d.xCg = p.xTa+p.Rcg; d.yLu = p.Prof/2; d.XD = -d.EcG;
+    return d;
+  },
+  check(d){
+    const w = [];
+    if (d.Rcg > d.zBr) w.push("Le congé ne peut pas dépasser la hauteur du talon.");
+    if (d.xLa-d.rLu <= d.xCg) w.push("La lumière doit commencer après le congé.");
+    if (d.xLb+d.rLu >= d.xBi) w.push("La lumière mord sur les biseaux.");
+    if (2*d.rLu >= d.Prof-2*d.yBi) w.push("La lumière est plus large que le bout du bras.");
+    return w;
+  },
+  views(d, cor, a){
+    const {Long:L, Prof:P, Haut:H, zBr, xTa, Rcg:R, Ch, xBi, yBi, xLa, xLb, rLu:r, zCh, xCg, yLu, XD, EcD, Deb:deb} = d;
+    const F = (x,z) => [x,-z], T = (x,y) => [x,EcD+y], D = (y,z) => [XD-y,-z];
+    const arc = (cx,cy,rr,a0,a1,map) => Array.from({length:25},(_,i) => { const t = (a0+(a1-a0)*i/24)*Math.PI/180; return map(cx+rr*Math.cos(t), cy+rr*Math.sin(t)); });
+    a.label([0,-H-deb-5],"Vue de face"); a.label([XD-P,-H-deb-5],"Vue de droite"); a.label([0,EcD+P+9],"Vue de dessus");
+    // vue de face
+    a.line("bloc",[F(0,zCh),F(0,0),F(xTa,0)]);
+    a.curve("talon",arc(xCg,0,R,180,90,F));
+    a.line("bloc",[F(xCg,zBr),F(L,zBr),F(L,H),F(Ch,H)]);
+    a.line("chanf",[F(Ch,H),F(0,zCh)]);
+    a.line("bis",[F(xBi,zBr),F(xBi,H)],"vu",true);
+    a.line("lum",[F(xLa-r,zBr),F(xLa-r,H)],"cache",true); a.line("lum",[F(xLb+r,zBr),F(xLb+r,H)],"cache",true);
+    a.axe("lum",F(xLa,zBr-deb),F(xLa,H+deb),true); a.axe("lum",F(xLb,zBr-deb),F(xLb,H+deb),true);
+    // vue de dessus
+    a.line("bloc",[T(xBi,0),T(0,0),T(0,P),T(xBi,P)]);
+    a.line("bis",[T(xBi,0),T(L,yBi),T(L,P-yBi),T(xBi,P)]);
+    a.curve("lum",[T(xLa,yLu-r),...arc(xLb,yLu,r,-90,90,T),...arc(xLa,yLu,r,90,270,T)]);
+    a.axe("lum",T(xLa-r-deb,yLu),T(xLb+r+deb,yLu)); a.axe("lum",T(xLa,yLu-r-deb),T(xLa,yLu+r+deb)); a.axe("lum",T(xLb,yLu-r-deb),T(xLb,yLu+r+deb));
+    a.line("chanf",[T(Ch,0),T(Ch,P)],"vu",true);
+    a.line("talon",[T(xTa,0),T(xTa,P)],"cache",true);
+    // vue de droite (avant à gauche)
+    a.line("bloc",[D(0,d.AmH*H),D(0,0),D(d.AmP*P,0)],"fin","e");
+    a.line("bloc",[D(0,0),D(P,0),D(P,H),D(0,H),D(0,0)],"vu",true);
+    a.line("talon",[D(0,zBr),D(P,zBr)],"vu",true);
+    a.line("bis",[D(yBi,zBr),D(yBi,H)],"vu",true); a.line("bis",[D(P-yBi,zBr),D(P-yBi,H)],"vu",true);
+    a.line("chanf",[D(0,zCh),D(P,zCh)],"cache",true);
+    a.line("lum",[D(yLu-r,zBr),D(yLu-r,H)],"cache",true); a.line("lum",[D(yLu+r,zBr),D(yLu+r,H)],"cache",true);
+    a.axe("lum",D(yLu,zBr-deb),D(yLu,H+deb),true);
+    // renvois et droite à 45°
+    a.line("bloc",[[XD,0],[XD,EcD]],"fin"); a.line("bloc",[T(0,0),[XD,EcD]],"fin");
+    a.line("bloc",[[XD+3,EcD-3],[XD-P-4,EcD+P+4]],"fin");
+    // arête repérée
+    a.line("rouge",[F(xBi,zBr),F(xBi,H)],"vu",true); a.dot("rouge",T(xBi,P)); a.line("rouge",[D(P,zBr),D(P,H)],"vu",true);
+    // traits de construction (R4)
+    const fd = (el,xs,z,ye) => a.cons(el,[F(xs,z), D(cor?ye:P, z)]);
+    const td = (el,xs,y,ze) => a.cons(el,[T(xs,y), [XD-y,EcD+y], D(y, cor?ze:H)]);
+    const ft = (el,x,zs,ye) => a.cons(el,[F(x,zs), T(x, cor?ye:P)]);
+    fd("bloc",Ch,H,P); fd("bloc",0,0,P); ft("bloc",0,0,P); ft("bloc",L,zBr,P-yBi);
+    fd("chanf",0,zCh,P); ft("chanf",Ch,H,P);
+    fd("talon",xCg,zBr,P); ft("talon",xTa,0,P);
+    td("bis",L,yBi,H); td("bis",L,P-yBi,H); td("bloc",Ch,0,H); td("bloc",Ch,P,H); ft("bis",xBi,zBr,P);
+    td("lum",xLa,yLu-r,H); td("lum",xLa,yLu+r,H); ft("lum",xLa-r,zBr,yLu); ft("lum",xLb+r,zBr,yLu);
+    ft("rouge",xBi,zBr,P); fd("rouge",xBi,H,P);
+  },
+  solid(d, k){
+    const {Long:L, Prof:P, Haut:H, zBr, xTa, Rcg:R, Ch, xBi, yBi, xLa, xLb, rLu:r, zCh, xCg, yLu} = d, rad = Math.PI/180;
+    // axes de la lumière : axe de chaque bout (croix quand on regarde d'au-dessus), axe de symétrie vu d'au-dessus
+    [xLa,xLb].forEach(x => k.revol("lum",[x,yLu,zBr-5],[x,yLu,H+5],r,[[x,yLu,H],[x,yLu,zBr]],[1,0,0]));
+    [H,zBr].forEach(z => k.axeVue("lum",[xLa-r-4,yLu,z],[xLb+r+4,yLu,z],[0,0,1]));
+    const prof = [[0,0],[xTa,0],...k.arc(xCg,0,R,180,90,18),[xBi,zBr],[xBi,H],[Ch,H],[0,zCh]];
+    const lum = [...k.arc(xLb,yLu,r,-90,90,24),...k.arc(xLa,yLu,r,90,270,24)];
+    k.poly("talon",[[0,0,0],[xTa,0,0],[xTa,P,0],[0,P,0]]);
+    k.surf("talon",(u,v) => { const t = (180-90*v)*rad; return [xCg+R*Math.cos(t), u*P, R*Math.sin(t)]; },1,18,{edges:[]});
+    const dessous = [[xCg,0],[xBi,0],[L,yBi],[L,P-yBi],[xBi,P],[xCg,P]];
+    k.planar("bloc",dessous,[lum],(u,v) => [u,v,zBr],{edges:[dessous,lum.concat([lum[0]])]});
+    k.tangent("talon",[[[xCg,0,zBr],[xCg,P,zBr]]]);   // congé / dessous du bras
+    k.planar("bloc",prof,[],(u,v) => [u,0,v]); k.planar("bloc",prof,[],(u,v) => [u,P,v]);
+    k.poly("bloc",[[0,0,0],[0,P,0],[0,P,zCh],[0,0,zCh]]);
+    k.poly("chanf",[[0,0,zCh],[Ch,0,H],[Ch,P,H],[0,P,zCh]]);
+    k.planar("bloc",[[Ch,0],[xBi,0],[L,yBi],[L,P-yBi],[xBi,P],[Ch,P]],[lum],(u,v) => [u,v,H]);
+    k.poly("bis",[[xBi,0,zBr],[L,yBi,zBr],[L,yBi,H],[xBi,0,H]]);
+    k.poly("bis",[[xBi,P,zBr],[L,P-yBi,zBr],[L,P-yBi,H],[xBi,P,H]]);
+    k.poly("bis",[[L,yBi,zBr],[L,P-yBi,zBr],[L,P-yBi,H],[L,yBi,H]]);
+    [-1,1].forEach(s => k.planar("lum",[[xLa,zBr],[xLb,zBr],[xLb,H],[xLa,H]],[],(u,v) => [u,yLu+s*r,v],{edges:[],tangent:[[[xLa,zBr],[xLa,H]],[[xLb,zBr],[xLb,H]]]}));
+    k.surf("lum",(u,v) => { const t = (-90+180*v)*rad; return [xLb+r*Math.cos(t), yLu+r*Math.sin(t), zBr+u*(H-zBr)]; },1,24,{edges:[]});
+    k.surf("lum",(u,v) => { const t = (90+180*v)*rad; return [xLa+r*Math.cos(t), yLu+r*Math.sin(t), zBr+u*(H-zBr)]; },1,24,{edges:[]});
+    k.edge("rouge",[[xBi,P,zBr],[xBi,P,H]]);
+  }
+};
+
+})();
+
+// =====================================================================
+// Moteur commun : règles de traits, rendu SVG, interaction, 3D
+// =====================================================================
+const DRAW = {TiretC:2.5, VideC:1, LongA:7, CourtA:1, VideA:1, Marge:6};
+// épaisseurs, tirets et textes proportionnels à la taille du dessin (largeur de référence 260 mm) :
+// à l'écran, toutes les pièces ont ainsi les mêmes épaisseurs de trait, comme sur les fiches imprimées
+const VREF = 260; let SK = 1;
+let P = {...PIECE.defaults};
+let sheet = "corrige", active = null, pinned = null, view3d = null;
+const ELS = PIECE.elements;
+
+// R1 : trait interrompu — commence et finit par un tiret
+function dashCache(L){
+  const d = DRAW.TiretC*SK, g = DRAW.VideC*SK, n = Math.max(1, Math.round((L+g)/(d+g))), k = L/(n*d+(n-1)*g);
+  return n === 1 ? "none" : `${(d*k).toFixed(3)} ${(g*k).toFixed(3)}`;
+}
+// R2 : trait mixte — éléments entiers, trait long aux deux bouts, nombre impair de traits longs
+function dashAxe(L){
+  const A = DRAW.LongA*SK, c = DRAW.CourtA*SK, g = DRAW.VideA*SK, G = c+2*g;
+  const n = Math.max(1, 2*Math.round(((L+G)/(A+G)-1)/2)+1), k = L/(n*A+(n-1)*G);
+  return n === 1 ? "none" : `${(A*k).toFixed(3)} ${(g*k).toFixed(3)} ${(c*k).toFixed(3)} ${(g*k).toFixed(3)}`;
+}
+// hachures à 45° (pas 2,5) dans des contours fermés, règle pair-impair
+function hatchSegs(rings, h=2.5*SK){
+  const r2 = Math.SQRT1_2, S = q => (q[0]+q[1])*r2, T = q => (q[0]-q[1])*r2, out = [];
+  let lo = Infinity, hi = -Infinity; rings.forEach(r => r.forEach(q => { lo = Math.min(lo,S(q)); hi = Math.max(hi,S(q)); }));
+  for (let s = (Math.floor(lo/h)+.5)*h; s < hi; s += h){
+    const ts = [];
+    rings.forEach(r => r.forEach((p,i) => { const q = r[(i+1)%r.length], sp = S(p), sq = S(q);
+      if ((sp <= s) !== (sq <= s)) ts.push(T(p) + (T(q)-T(p))*(s-sp)/(sq-sp)); }));
+    ts.sort((a,b) => a-b);
+    for (let i = 0; i+1 < ts.length; i += 2) out.push([[(s+ts[i])*r2,(s-ts[i])*r2],[(s+ts[i+1])*r2,(s-ts[i+1])*r2]]);
+  }
+  return out;
+}
+const len = (a,b) => Math.hypot(b[0]-a[0], b[1]-a[1]);
+const plen = pts => pts.slice(1).reduce((s,q,i) => s+len(pts[i],q), 0);
+
+// ---------- rendu SVG ----------
+const svg = document.getElementById("dwg"), NS = "http://www.w3.org/2000/svg";
+const f3 = v => +v.toFixed(3), pt = q => `${f3(q[0])},${f3(q[1])}`;
+function mk(tag, attrs, parent){ const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent && parent.appendChild(n); return n; }
+
+function render(){
+  const d = PIECE.derive(P), cor = sheet === "corrige";
+  const els = {}; ELS.forEach(e => els[e.id] = {prims:[], cons:[]});
+  const labels = [], nums = [], texts = [], box = [Infinity,Infinity,-Infinity,-Infinity];
+  const grow = q => { box[0]=Math.min(box[0],q[0]); box[1]=Math.min(box[1],q[1]); box[2]=Math.max(box[2],q[0]); box[3]=Math.max(box[3],q[1]); };
+  // only : false = toujours, true = corrigé seulement, "e" = énoncé seulement
+  const ok = only => !only || (only === true ? cor : !cor);
+  const api = {
+    cor,
+    line(el, pts, type="vu", only=false){ if (ok(only)) { els[el].prims.push({kind:"line", pts, type}); pts.forEach(grow); } },
+    curve(el, pts, type="vu", only=false){ if (ok(only)) { els[el].prims.push({kind:"curve", pts, type}); pts.forEach(grow); } },
+    circle(el, c, r, type="vu", only=false){ if (ok(only)) { els[el].prims.push({kind:"circle", c, r, type}); grow([c[0]-r,c[1]-r]); grow([c[0]+r,c[1]+r]); } },
+    dot(el, p, only=true){ if (ok(only)) els[el].prims.push({kind:"dot", c:p}); },
+    axe(el, a, b, only=false){ api.line(el, [a,b], "axe", only); },
+    cons(el, pts){ els[el].cons.push(pts); pts.forEach(grow); },
+    label(p, text){ labels.push({p, text}); grow(p); },
+    // hachures (coupe) : contours fermés, règle pair-impair ; traits fins à 45°
+    hatch(el, rings, only=true){ if (ok(only)) { els[el].prims.push({kind:"hatch", rings}); rings.forEach(r => r.forEach(grow)); } },
+    // flèche du plan de coupe (de a vers b, pointe en b)
+    arrow(el, a, b, only=true){ if (ok(only)) { els[el].prims.push({kind:"arrow", pts:[a,b]}); grow(a); grow(b); } },
+    // lettre ou désignation (A, A-A)
+    text(p, str, only=false){ if (ok(only)) { texts.push({p, str}); grow([p[0]-3,p[1]-4]); grow([p[0]+3,p[1]+1]); } },
+    num(p, n, only=true){ if (ok(only)) { nums.push({p, n}); grow([p[0]-3,p[1]-3]); grow([p[0]+3,p[1]+3]); } },
+  };
+  PIECE.views(d, cor, api);
+
+  svg.textContent = "";
+  const m = DRAW.Marge;
+  svg.setAttribute("viewBox", `${f3(box[0]-m)} ${f3(box[1]-m)} ${f3(box[2]-box[0]+2*m)} ${f3(box[3]-box[1]+2*m)}`);
+  SK = (box[2]-box[0]+2*m)/VREF; svg.style.setProperty("--sk", SK.toFixed(3));
+  const gCons = mk("g",{},svg), gEls = mk("g",{},svg);
+  ELS.forEach(e => {
+    const gc = mk("g",{class:"cons","data-el":e.id},gCons);
+    els[e.id].cons.forEach(c => mk("polyline",{points:c.map(pt).join(" ")},gc));
+    const g = mk("g",{class:"el"+(e.color ? " "+e.color : ""),"data-el":e.id},gEls);
+    const ink = mk("g",{class:"ink"},g), hit = mk("g",{class:"hit"},g);
+    els[e.id].prims.forEach(p => { draw(p, ink, e.color ? "rep" : null); draw({...p, type:"h"}, hit); });
+  });
+  labels.forEach(({p,text}) => { mk("text",{x:f3(p[0]),y:f3(p[1]),class:"t"},svg).textContent = text; });
+  texts.forEach(({p,str}) => { mk("text",{x:f3(p[0]),y:f3(p[1]),class:"lt"},svg).textContent = str; });
+  nums.forEach(({p,n}) => { const g = mk("g",{class:"num"},svg); mk("circle",{cx:f3(p[0]),cy:f3(p[1]),r:2},g); mk("text",{x:f3(p[0]),y:f3(p[1])+.1},g).textContent = n; });
+
+  const w = PIECE.check ? PIECE.check(d) : [], warn = document.getElementById("warn");
+  warn.hidden = !w.length; warn.textContent = w.join(" ");
+  if (view3d) view3d.rebuild(d);
+  applyActive();
+}
+function draw(p, parent, force){
+  const cls = force && p.type !== "h" ? force : p.type;
+  if (p.kind === "hatch"){
+    if (p.type === "h") return;
+    hatchSegs(p.rings).forEach(([a,b]) => mk("line",{x1:f3(a[0]),y1:f3(a[1]),x2:f3(b[0]),y2:f3(b[1]),class:"hach"},parent));
+    return; }
+  if (p.kind === "arrow"){
+    const [a,b] = p.pts, L = len(a,b) || 1, u = [(b[0]-a[0])/L,(b[1]-a[1])/L], n = [-u[1],u[0]], h = 2.6, w = .9;
+    mk("line",{x1:f3(a[0]),y1:f3(a[1]),x2:f3(b[0]-u[0]*h*.6),y2:f3(b[1]-u[1]*h*.6),class:p.type === "h" ? "h" : "fin"},parent);
+    if (p.type !== "h") mk("polygon",{points:[b,[b[0]-u[0]*h+n[0]*w,b[1]-u[1]*h+n[1]*w],[b[0]-u[0]*h-n[0]*w,b[1]-u[1]*h-n[1]*w]].map(pt).join(" "),class:"ah"},parent);
+    return; }
+  if (p.kind === "dot"){ mk("circle",{cx:f3(p.c[0]),cy:f3(p.c[1]),r:.9,class:"pt",style:"stroke-width:.2"},parent); return; }
+  if (p.kind === "circle"){
+    const a = {cx:f3(p.c[0]),cy:f3(p.c[1]),r:f3(p.r),class:cls};
+    if (p.type === "cache") a["stroke-dasharray"] = dashCache(2*Math.PI*p.r);
+    mk("circle",a,parent); return; }
+  if (p.kind === "curve"){
+    const a = {d:"M"+p.pts.map(pt).join(" L"),class:cls};
+    if (p.type === "cache") a["stroke-dasharray"] = dashCache(plen(p.pts));
+    if (p.type === "axe") a["stroke-dasharray"] = dashAxe(plen(p.pts));
+    mk("path",a,parent); return; }
+  // polyligne : chaque segment reçoit son propre motif (R1, R2)
+  if (p.type === "cache" || p.type === "axe"){
+    for (let i = 0; i < p.pts.length-1; i++){
+      const a = p.pts[i], b = p.pts[i+1];
+      mk("line",{x1:f3(a[0]),y1:f3(a[1]),x2:f3(b[0]),y2:f3(b[1]),class:cls,
+        "stroke-dasharray": p.type === "cache" ? dashCache(len(a,b)) : dashAxe(len(a,b))},parent);
+    }
+  } else mk("polyline",{points:p.pts.map(pt).join(" "),class:cls},parent);
+}
+
+// ---------- légende ----------
+(() => {
+  const L = 44, lg = document.getElementById("legend");
+  [["vu","Arête vue — trait continu fort",{"stroke-width":1.6}],
+   ["cache","Arête cachée — trait interrompu",{"stroke-width":1,"stroke-dasharray":"5 2.6"}],
+   ["axe","Axe — trait mixte",{"stroke-width":.8,"stroke-dasharray":"12 2 2 2"}],
+   ["constr","Trait de construction",{"stroke-width":.6,stroke:"var(--constr)"}]].forEach(([k,t,a]) => {
+    const s = document.createElementNS(NS,"svg"); s.setAttribute("viewBox","0 0 44 8");
+    mk("line",{x1:1,y1:4,x2:43,y2:4,stroke:"var(--ink)",...a},s);
+    const span = document.createElement("span"); span.textContent = t;
+    lg.append(s, span);
+  });
+  if (PIECE.coupe){
+    const s = document.createElementNS(NS,"svg"); s.setAttribute("viewBox","0 0 44 8");
+    for (let x = -6; x < 44; x += 3) mk("line",{x1:x,y1:8,x2:x+8,y2:0,stroke:"var(--ink)","stroke-width":.5},s);
+    const span = document.createElement("span"); span.textContent = "Hachures — matière coupée par le plan de coupe"; lg.append(s, span);
+  }
+  if (ELS.some(e => e.color)){
+    [["rouge","Arête repérée en rouge"],["bleu","Arête repérée en bleu"]].forEach(([c,t]) => {
+      if (!ELS.some(e => e.color === c)) return;
+      const s = document.createElementNS(NS,"svg"); s.setAttribute("viewBox","0 0 44 8");
+      mk("line",{x1:1,y1:4,x2:43,y2:4,stroke:`var(--${c})`,"stroke-width":2.4},s);
+      const span = document.createElement("span"); span.textContent = t; lg.append(s, span);
+    });
+  }
+})();
+
+// ---------- interaction ----------
+const list = document.getElementById("elList");
+ELS.forEach(e => {
+  const li = document.createElement("li"); li.tabIndex = 0; li.dataset.el = e.id; if (e.color) li.classList.add(e.color);
+  li.innerHTML = `<span class="dot"></span><span><b></b><small></small></span>`;
+  li.querySelector("b").textContent = e.name; li.querySelector("small").textContent = e.info;
+  list.appendChild(li);
+});
+function applyActive(){
+  const id = pinned || active;
+  svg.classList.toggle("has-active", !!id);
+  svg.querySelectorAll("[data-el]").forEach(n => n.classList.toggle("active", n.dataset.el === id));
+  list.querySelectorAll("li").forEach(n => { n.classList.toggle("active", n.dataset.el === id); n.classList.toggle("pinned", n.dataset.el === pinned); });
+  if (view3d) view3d.setActive(id);
+}
+const target = ev => ev.target.closest && ev.target.closest("[data-el]");
+function over(ev){ const t = target(ev); active = t ? t.dataset.el : null; applyActive(); }
+function togglePin(id){ pinned = pinned === id ? null : id; applyActive(); }
+svg.addEventListener("pointerover", ev => { if (ev.pointerType === "mouse") over(ev); });
+svg.addEventListener("pointerleave", () => { active = null; applyActive(); });
+svg.addEventListener("click", ev => { const t = target(ev); if (t) togglePin(t.dataset.el); else { pinned = null; applyActive(); } });
+list.addEventListener("pointerover", ev => { if (ev.pointerType === "mouse") over(ev); });
+list.addEventListener("pointerleave", () => { active = null; applyActive(); });
+list.addEventListener("click", ev => { const t = target(ev); t && togglePin(t.dataset.el); });
+list.addEventListener("keydown", ev => { if ((ev.key === "Enter" || ev.key === " ") && target(ev)) { ev.preventDefault(); togglePin(target(ev).dataset.el); } });
+list.addEventListener("focusin", ev => { const t = target(ev); active = t ? t.dataset.el : null; applyActive(); });
+function seg(idSeg, fn){
+  const box = document.getElementById(idSeg);
+  box.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
+    box.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fn(b.dataset.v); });
+}
+seg("segSheet", v => { sheet = v; document.getElementById("sheetTag").textContent = v === "corrige" ? "— corrigé" : "— énoncé"; render(); });
+seg("segCons", v => { svg.classList.remove("c-hover","c-always","c-never"); svg.classList.add("c-"+v); });
+
+// cotes
+const dims = document.getElementById("dims");
+PIECE.dims.forEach(([k,label]) => {
+  if (!label){ const g = document.createElement("div"); g.className = "grp"; g.textContent = k; dims.appendChild(g); return; }
+  const l = document.createElement("label"); l.htmlFor = "dim-"+k; l.textContent = label;
+  const i = document.createElement("input"); i.type = "number"; i.step = "0.5"; i.min = "0"; i.id = "dim-"+k; i.value = P[k];
+  i.addEventListener("input", () => { const v = parseFloat(i.value); if (isFinite(v) && v > 0){ P[k] = v; render(); } });
+  dims.append(l, i);
+});
+document.getElementById("reset").addEventListener("click", () => {
+  P = {...PIECE.defaults}; PIECE.dims.forEach(([k,l]) => { if (l) document.getElementById("dim-"+k).value = P[k]; }); render();
+});
+
+// =====================================================================
+// Pièce en 3D (three.js, caméra orthographique)
+// Repère pièce (x, y, z) -> three.js (x, z, y). Arêtes vues en trait plein,
+// arêtes cachées en pointillés (second tracé avec depthFunc = GreaterDepth).
+// Contours apparents des surfaces courbes recalculés à chaque image.
+// =====================================================================
+view3d = (() => {
+  const box = document.getElementById("v3d"), msg = document.getElementById("v3dMsg");
+  if (!window.THREE) { msg.hidden = false; return null; }
+  const AXE3 = 0x5f7486, TAN = 0x9a9a9a, FIN = 0x6b6b6b, SCIE3 = 0xb4bec8, FACE = 0xe6eae7, FACE_ON = 0xfbe0bd, INK = 0x141414, HL = 0xe07800;
+  const COL = {rouge:0xd01e1e, bleu:0x1565c0};
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({antialias:true}); }
+  catch (e) { msg.hidden = false; msg.textContent = "La vue 3D demande WebGL, qui n’est pas disponible sur cet appareil."; return null; }
+  renderer.localClippingEnabled = true;
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setClearColor(0xffffff);
+  box.appendChild(renderer.domElement);
+  const scene = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1,1,1,-1,1,4000);
+  scene.add(cam); scene.add(new THREE.AmbientLight(0xffffff, .62));
+  const sun = new THREE.DirectionalLight(0xffffff, .6); sun.position.set(-.4,.7,1); cam.add(sun);
+  const V = (x,y,z) => new THREE.Vector3(x, z, y);
+  const side = PIECE.side === "droite" ? Math.PI/2 : -Math.PI/2;
+  const VIEWS = [["face","Face",0,Math.PI/2],["dessus","Dessus",0,1e-4],
+    [PIECE.side === "droite" ? "droite" : "gauche", PIECE.side === "droite" ? "Droite" : "Gauche", side, Math.PI/2],
+    ["iso","Isométrique",-Math.PI/4,Math.acos(1/Math.sqrt(3))]];
+  // pièce dessinée avec ses deux vues de côté : bouton « Gauche » en plus
+  if (PIECE.side === "deux") { VIEWS[2] = ["droite","Droite",Math.PI/2,Math.PI/2]; VIEWS.splice(3,0,["gauche","Gauche",-Math.PI/2,Math.PI/2]); }
+  const IV = VIEWS.length-1;
+  let group = new THREE.Group(); scene.add(group);
+  let meshes = [], lines = [], surfs = [], edgeOn = [], labs = [], croix = [], center = new THREE.Vector3(), span = 150;
+  let theta = VIEWS[IV][2], phi = VIEWS[IV][3], zoom = 1, showHidden = true, showTan = false, showCut = false, showSaw = true, showAxes = true, showLabs = true, lastD = null, activeId = null, anim = null;
+  const colorOf = el => { const e = ELS.find(x => x.id === el); return e && e.color ? COL[e.color] : INK; };
+
+  function addLines(geo, el){
+    const c = colorOf(el), w = c === INK ? 1 : 3;
+    const vis = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color:c, linewidth:w}));
+    const hid = new THREE.LineSegments(geo, new THREE.LineDashedMaterial({color:c, dashSize:2, gapSize:1.3,
+      depthFunc:THREE.GreaterDepth, depthWrite:false, transparent:true, opacity:.7}));
+    if (geo.attributes.position && !geo.attributes.lineDistance) hid.computeLineDistances();
+    hid.visible = showHidden; vis.renderOrder = 1; hid.renderOrder = 2;
+    vis.userData = {el, hid:false, base:c}; hid.userData = {el, hid:true, base:c};
+    group.add(vis, hid); lines.push(vis, hid);
+    return [vis, hid];
+  }
+  // segments d'une ou plusieurs polylignes ; la distance le long de chaque polyligne est cumulée
+  // pour que les pointillés d'une arête courbe se suivent au lieu de repartir à chaque petit segment
+  const segGeo = polys => {
+    const pts = [], dist = [];
+    polys.forEach(pl => { let acc = 0;
+      for (let i = 0; i < pl.length-1; i++){
+        const a = V(...pl[i]), b = V(...pl[i+1]), l = a.distanceTo(b);
+        // segment droit parallèle à un axe : pointillés calés sur la coordonnée, pour que deux arêtes
+        // qui se superposent dans une vue (devant / derrière) gardent la même phase au lieu de paraître continues
+        const ax = ["x","y","z"].find(k => Math.abs(b[k]-a[k]) > l*(1-1e-6));
+        if (ax && l > 3) dist.push(a[ax], b[ax]); else dist.push(acc, acc+l);
+        pts.push(a, b); acc += l; } });
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    g.setAttribute("lineDistance", new THREE.Float32BufferAttribute(dist, 1));
+    return g;
+  };
+  function addMesh(g, el){
+    g.computeVertexNormals();
+    const base = el === "scie" ? SCIE3 : FACE;   // lame de scie : gris acier
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:base, side:THREE.DoubleSide, roughness:.95, metalness:0,
+      polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1}));
+    m.userData.el = el; m.userData.base = base; group.add(m); meshes.push(m);
+  }
+  // ---- noyau de modélisation offert aux pièces ----
+  const K = {
+    arc(cx, cy, r, a0, a1, n){ n = n || Math.max(8, Math.ceil(Math.abs(a1-a0)/5)); const out = [];
+      for (let i = 0; i <= n; i++){ const a = (a0+(a1-a0)*i/n)*Math.PI/180; out.push([cx+r*Math.cos(a), cy+r*Math.sin(a)]); } return out; },
+    // face plane : contour et trous en 2D (u,v), placés en 3D par map(u,v) -> [x,y,z]
+    planar(el, outer, holes = [], map, opts = {}){
+      const clean = pl => pl.filter((q,i) => i === 0 || Math.hypot(q[0]-pl[i-1][0], q[1]-pl[i-1][1]) > 1e-6);
+      const o = clean(outer); if (Math.hypot(o[0][0]-o[o.length-1][0], o[0][1]-o[o.length-1][1]) < 1e-6) o.pop();
+      const hs = holes.map(h => { const c = clean(h); if (Math.hypot(c[0][0]-c[c.length-1][0], c[0][1]-c[c.length-1][1]) < 1e-6) c.pop(); return c; });
+      const tri = THREE.ShapeUtils.triangulateShape(o.map(q => new THREE.Vector2(...q)), hs.map(h => h.map(q => new THREE.Vector2(...q))));
+      const all = [o, ...hs].flat(), pos = [];
+      tri.forEach(t => t.forEach(i => { const v = V(...map(...all[i])); pos.push(v.x, v.y, v.z); }));
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+      addMesh(g, el);
+      const loops = opts.edges ? opts.edges : [o.concat([o[0]]), ...hs.map(h => h.concat([h[0]]))];
+      addLines(segGeo(loops.map(pl => pl.map(q => map(...q)))), el);
+      // opts.tangent : raccords tangents, tracés seulement quand la face est vue par la tranche
+      // (ils sont alors le contour apparent de la surface courbe voisine)
+      // avec l'option « raccords tangents », ils sont tracés en gris dans toutes les directions
+      if (opts.tangent){
+        const p0 = new THREE.Vector3(...map(0,0)), n = new THREE.Vector3(...map(1,0)).sub(p0).cross(new THREE.Vector3(...map(0,1)).sub(p0)).normalize();
+        K.tangent(el, opts.tangent.map(pl => pl.map(q => map(...q))), n);
+      }
+    },
+    // face plane donnée directement par ses sommets 3D (polygone convexe ou simple)
+    poly(el, pts3, opts = {}){
+      const a = new THREE.Vector3(...pts3[0]), b = new THREE.Vector3(...pts3[1]), c = new THREE.Vector3(...pts3[2]);
+      const n = new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a)).normalize();
+      const e1 = new THREE.Vector3().subVectors(b,a).normalize(), e2 = new THREE.Vector3().crossVectors(n,e1);
+      const uv = pts3.map(p => { const q = new THREE.Vector3(...p).sub(a); return [q.dot(e1), q.dot(e2)]; });
+      K.planar(el, uv, [], (u,v) => { const q = a.clone().addScaledVector(e1,u).addScaledVector(e2,v); return [q.x,q.y,q.z]; }, opts);
+    },
+    // surface paramétrée fn(u,v) -> [x,y,z], u et v dans [0,1] ; opts.edges : bords à tracer
+    surf(el, fn, nu, nv, opts = {}){
+      const pos = [], idx = [], P3 = [];
+      for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++){ const p = fn(i/nu, j/nv); P3.push(p); const v = V(...p); pos.push(v.x,v.y,v.z); }
+      const id = (i,j) => i*(nv+1)+j;
+      for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) idx.push(id(i,j),id(i+1,j),id(i,j+1), id(i+1,j),id(i+1,j+1),id(i,j+1));
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx);
+      addMesh(g, el);
+      const ed = opts.edges || ["u0","u1","v0","v1"], polys = [];
+      if (ed.includes("u0")) polys.push(Array.from({length:nv+1},(_,j) => P3[id(0,j)]));
+      if (ed.includes("u1")) polys.push(Array.from({length:nv+1},(_,j) => P3[id(nu,j)]));
+      if (ed.includes("v0")) polys.push(Array.from({length:nu+1},(_,i) => P3[id(i,0)]));
+      if (ed.includes("v1")) polys.push(Array.from({length:nu+1},(_,i) => P3[id(i,nv)]));
+      if (polys.length) addLines(segGeo(polys), el);
+      // normales sur la grille, pour le contour apparent
+      const N = P3.map((_,k) => { const i = Math.floor(k/(nv+1)), j = k%(nv+1);
+        const du = new THREE.Vector3(...P3[id(Math.min(i+1,nu),j)]).sub(new THREE.Vector3(...P3[id(Math.max(i-1,0),j)]));
+        const dv = new THREE.Vector3(...P3[id(i,Math.min(j+1,nv))]).sub(new THREE.Vector3(...P3[id(i,Math.max(j-1,0))]));
+        return du.cross(dv).normalize(); });
+      surfs.push({P3, N, nu, nv, id, sil:addLines(new THREE.BufferGeometry(), el)});
+    },
+    edge(el, pts3){ addLines(segGeo([pts3]), el); },
+    // axe (trait mixte approché par des tirets fins, tracé par-dessus la pièce)
+    axe(el, a3, b3){
+      return mixte(el, [[a3, b3]]);
+    },
+    // axe d'une surface de révolution (trou, cylindre) : trait mixte de a à b, toujours tracé ; on y ajoute
+    // la croix d'axes (bras de r + 4) à chaque extrémité (« bouts ») quand le regard devient
+    // presque parallèle à l'axe (moins de 20°, retirée au-delà de 25°)
+    // sans : direction d'un bras à ne pas tracer, quand un axe de symétrie (axeVue) le remplace (U, lumière)
+    revol(el, a3, b3, r, bouts = [a3, b3], sans = null){
+      K.axe(el, a3, b3);
+      const dm = b3.map((v,i) => v - a3[i]), ld = Math.hypot(...dm), dir = dm.map(v => v/ld);
+      const e = [0,1,2].reduce((m,i) => Math.abs(dir[i]) < Math.abs(dir[m]) ? i : m, 0), ax = [0,0,0]; ax[e] = 1;
+      const cr = (p,q) => [p[1]*q[2]-p[2]*q[1], p[2]*q[0]-p[0]*q[2], p[0]*q[1]-p[1]*q[0]], nz = p => { const l = Math.hypot(...p); return p.map(v => v/l); };
+      const u = nz(cr(dir, ax)), v = cr(dir, u), l = r + 4;
+      const bras = [u, v].filter(w => !sans || Math.abs(w[0]*sans[0]+w[1]*sans[1]+w[2]*sans[2]) < 0.9*Math.hypot(...sans));
+      croix.push({dir:V(...dir), on:false, objs: bouts.map(c => mixte(el, bras.map(w => [c.map((q,i) => q-l*w[i]), c.map((q,i) => q+l*w[i])]), true))});
+    },
+    // axe tracé seulement quand on regarde à peu près selon dir (même règle que les croix) :
+    // axe de symétrie d'une lumière ou d'un U, qui relie les croix des deux bouts
+    axeVue(el, a3, b3, dir){
+      const l = Math.hypot(...dir);
+      croix.push({dir:V(...dir.map(v => v/l)), on:false, objs:[mixte(el, [[a3, b3]], true)]});
+    },
+    // trait fin continu (croix de méplat...) : gris, caché par la matière, sans version en pointillés
+    fin(el, polys){
+      const l = new THREE.LineSegments(segGeo(polys), new THREE.LineBasicMaterial({color:FIN}));
+      l.renderOrder = 1; l.userData = {el, hid:false, base:FIN}; group.add(l); lines.push(l);
+    },
+    // raccord tangent entre deux surfaces (polylignes 3D) : pas une arête. Tracé en gris si l'option est
+    // cochée ; en noir quand la face plane de normale n (facultative) est vue par la tranche (contour apparent)
+    tangent(el, polys, n = null){
+      const objs = addLines(new THREE.BufferGeometry(), el);
+      edgeOn.push({n, g:segGeo(polys), empty:objs[0].geometry, objs});
+    },
+    label(text, p3){ const d = document.createElement("div"); d.className = "lab"; d.textContent = text; d.hidden = !showLabs; box.appendChild(d); labs.push({d, p:V(...p3)});
+      document.getElementById("labLab").hidden = false; },
+  };
+  // trait mixte : long trait, vide, point (court trait), vide ... ; commence et finit par un long trait
+  function mixte(el, paires, cache = false){
+    const segs = [];
+    paires.forEach(([a3, b3]) => {
+      const LG = 7, CT = 1, VD = 1.4, len = Math.hypot(...b3.map((v,i) => v - a3[i]));
+      const n = Math.max(0, Math.round((len - LG)/(LG + CT + 2*VD))), k = n ? len/(LG + n*(LG + CT + 2*VD)) : 1;
+      const at = t => a3.map((v,i) => v + (b3[i]-v)*t/len);
+      let t = 0;
+      for (let i = 0; i <= n; i++){
+        segs.push([at(t), at(Math.min(len, t + LG*k))]); t += LG*k;
+        if (i < n){ t += VD*k; segs.push([at(t), at(t + CT*k)]); t += (CT + VD)*k; }
+      }
+    });
+    const l = new THREE.LineSegments(segGeo(segs), new THREE.LineBasicMaterial({color:AXE3, depthTest:false, transparent:true, opacity:.85}));
+    l.renderOrder = 3; l.visible = showAxes && !cache; l.userData = {el, hid:false, base:AXE3, axe:true, croix:cache}; group.add(l); lines.push(l);
+    return l;
+  }
+  function updateCroix(dv){
+    croix.forEach(c => {
+      const a = Math.acos(Math.min(1, Math.abs(c.dir.dot(dv))))*180/Math.PI;
+      c.on = c.on ? a < 25 : a < 20;
+      c.objs.forEach(o => { o.visible = showAxes && c.on; });   // croix aux deux extrémités
+    });
+  }
+  function updateSil(){ // contour apparent : n·v change de signe sur la grille (carrés marchants)
+    const dv = new THREE.Vector3().subVectors(cam.position, center).normalize(), dp = new THREE.Vector3(dv.x, dv.z, dv.y);
+    updateCroix(dv);
+    edgeOn.forEach(e => { const on = !!e.n && Math.abs(e.n.dot(dp)) < 1e-3;
+      e.objs.forEach(l => { l.geometry = on || showTan ? e.g : e.empty; l.userData.base = on ? INK : TAN;
+        l.material.color.setHex(l.userData.el === activeId ? HL : l.userData.base); }); });
+    surfs.forEach(s => {
+      // signe avec tolérance : une surface vue exactement le long de son axe n'a pas de contour apparent
+      const f = s.N.map(n => n.dot(dp)), sg0 = f.map(v => v > 1e-4 ? 1 : v < -1e-4 ? -1 : 0), pts = [], {nu, nv, id, P3} = s;
+      // un échantillon pile sur le contour (n·v = 0) compte comme positif, sinon le contour disparaît
+      const sg = sg0.some(x => x) ? sg0.map(x => x || 1) : sg0;
+      const lerp = (a,b) => { const t = Math.min(1, Math.max(0, f[a]/(f[a]-f[b] || 1e-12))); return V(...P3[a].map((c,k) => c+(P3[b][k]-c)*t)); };
+      for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++){
+        const c = [id(i,j),id(i+1,j),id(i+1,j+1),id(i,j+1)], cut = [];
+        for (let k = 0; k < 4; k++){ const a = c[k], b = c[(k+1)%4]; if (sg[a]*sg[b] < 0) cut.push(lerp(a,b)); }
+        if (cut.length >= 2) pts.push(cut[0], cut[1]);
+        if (cut.length === 4) pts.push(cut[2], cut[3]);
+      }
+      const g = new THREE.BufferGeometry().setFromPoints(pts);
+      s.sil[0].geometry.dispose(); s.sil.forEach(l => l.geometry = g); s.sil[1].computeLineDistances();
+    });
+  }
+  function rebuild(d){
+    scene.remove(group);
+    group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    labs.forEach(l => l.d.remove());
+    group = new THREE.Group(); scene.add(group); meshes = []; lines = []; surfs = []; edgeOn = []; labs = []; croix = [];
+    lastD = d;
+    PIECE.solid(d, K);
+    const bb = new THREE.Box3().setFromObject(group);
+    bb.getCenter(center); span = bb.getSize(new THREE.Vector3()).length();
+    const cut = showCut && PIECE.coupe3d;
+    if (cut) applyCut(d, bb);
+    // lame de scie de la pièce (dans le plan de coupe) : sur le modèle complet, la matière devant le plan la cache ;
+    // sur la pièce coupée, elle est posée sur la section. Ajoutée après la découpe pour ne pas être coupée.
+    if (showSaw && PIECE.scie){ const n0 = meshes.length; PIECE.scie(d, K);
+      if (cut) meshes.splice(n0).forEach(m => { m.material.transparent = true; m.material.opacity = .55; m.material.depthWrite = false; m.renderOrder = 3; }); }
+    resize(); setActive(activeId);
+  }
+  function frame(){
+    const R = 1500;
+    cam.position.set(center.x + R*Math.sin(phi)*Math.sin(theta), center.y + R*Math.cos(phi), center.z + R*Math.sin(phi)*Math.cos(theta));
+    cam.up.set(0,1,0); cam.lookAt(center); cam.zoom = zoom; cam.updateProjectionMatrix();
+    updateSil();
+    renderer.render(scene, cam);
+    const w = box.clientWidth, h = box.clientHeight;
+    labs.forEach(l => { const q = l.p.clone().project(cam); l.d.style.left = ((q.x+1)/2*w)+"px"; l.d.style.top = ((1-q.y)/2*h)+"px"; });
+  }
+  function resize(){
+    const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h);
+    const hh = span*0.5, a = w/h;
+    cam.left = -hh*a; cam.right = hh*a; cam.top = hh; cam.bottom = -hh;
+    frame();
+  }
+  function setActive(id){
+    activeId = id;
+    meshes.forEach(m => m.material.color.setHex(m.userData.el === id ? FACE_ON : m.userData.base));
+    lines.forEach(l => l.material.color.setHex(l.userData.el === id ? HL : l.userData.base));
+    frame();
+  }
+  // ---- essai : pièce coupée par le plan de coupe, scie imaginaire comme sur les fiches d'origine ----
+  // La partie côté observateur est retirée (plan de découpe) ; la section est « bouchée » par la
+  // méthode du stencil (parité des surfaces traversées : indépendante de l'orientation des faces)
+  // et hachurée ; une lame de scie translucide est posée dans le plan.
+  let hatchTex = null;
+  function applyCut(d, bb){
+    const c = PIECE.coupe3d(d), N = V(...c.n).normalize(), P0 = V(...c.p0);
+    const plane = new THREE.Plane(N, -N.dot(P0));
+    group.children.slice().forEach(o => { if (o.material) o.material.clippingPlanes = [plane]; });
+    meshes.forEach(m => {
+      const st = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({side:THREE.DoubleSide, colorWrite:false, depthWrite:false, depthTest:false,
+        stencilWrite:true, stencilFunc:THREE.AlwaysStencilFunc, stencilFail:THREE.InvertStencilOp, stencilZFail:THREE.InvertStencilOp,
+        stencilZPass:THREE.InvertStencilOp, clippingPlanes:[plane]}));
+      st.renderOrder = -1; group.add(st);
+    });
+    if (!hatchTex){
+      const cv = document.createElement("canvas"); cv.width = cv.height = 32; const g = cv.getContext("2d");
+      g.fillStyle = "#f3dede"; g.fillRect(0,0,32,32); g.strokeStyle = "#7a2424"; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(-4,36); g.lineTo(36,-4); g.moveTo(-4,4); g.lineTo(4,-4); g.moveTo(28,36); g.lineTo(36,28); g.stroke();
+      hatchTex = new THREE.CanvasTexture(cv); hatchTex.wrapS = hatchTex.wrapT = THREE.RepeatWrapping;
+    }
+    const S = span*1.6, tex = hatchTex.clone(); tex.needsUpdate = true; tex.repeat.set(S/3.5, S/3.5);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), N);
+    const C = plane.projectPoint(bb.getCenter(new THREE.Vector3()), new THREE.Vector3());
+    const cap = new THREE.Mesh(new THREE.PlaneGeometry(S,S), new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide,
+      stencilWrite:true, stencilRef:0, stencilFunc:THREE.NotEqualStencilFunc, stencilFail:THREE.ZeroStencilOp,
+      stencilZFail:THREE.ZeroStencilOp, stencilZPass:THREE.ZeroStencilOp, polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1}));
+    cap.quaternion.copy(q);
+    if (c.hach){ // hachures parallèles au trait principal de la lame : rotation de la texture autour de la normale
+      const w = new THREE.Vector3(1,1,0).normalize().applyQuaternion(q), t = V(...c.hach); t.addScaledVector(N, -t.dot(N)).normalize();
+      const ang = Math.atan2(N.dot(new THREE.Vector3().crossVectors(w, t)), w.dot(t));
+      cap.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(N, ang));
+    }
+    cap.position.copy(C); cap.renderOrder = 0.5; cap.userData.el = "coupe"; group.add(cap);
+    if (PIECE.scie) return;   // la pièce a sa propre lame (ajoutée par rebuild)
+    // lame de scie : bande dentée, translucide, un peu inclinée, posée devant la section
+    const up = new THREE.Vector3(0,1,0), u = new THREE.Vector3().crossVectors(up, N).normalize();
+    const h = bb.max.y-bb.min.y, L = S*0.5, bh = h*0.25, nt = 26, sh = new THREE.Shape();
+    sh.moveTo(-L/2, 0);
+    for (let i = 0; i < nt; i++){ const x = -L/2+L*i/nt; sh.lineTo(x+L/nt*0.94, -bh*0.11); sh.lineTo(x+L/nt, 0); }
+    sh.lineTo(L/2, bh); sh.lineTo(-L/2, bh); sh.lineTo(-L/2, 0);
+    const saw = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({color:0x7d8a96, transparent:true, opacity:.5,
+      side:THREE.DoubleSide, depthWrite:false}));
+    const basis = new THREE.Matrix4().makeBasis(u, up, N);
+    saw.quaternion.setFromRotationMatrix(basis).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1), -0.38));
+    saw.position.copy(C).addScaledVector(up, h*0.18).addScaledVector(N, -0.4); saw.renderOrder = 3; group.add(saw);
+  }
+  function setCut(on){ showCut = on; if (lastD) rebuild(lastD); }
+  function setSaw(on){ showSaw = on; if (lastD) rebuild(lastD); }
+  function setTan(on){ showTan = on; frame(); }
+  function setAxes(on){ showAxes = on; lines.forEach(l => { if (l.userData.axe && !l.userData.croix) l.visible = on; }); frame(); }
+  function setLabs(on){ showLabs = on; labs.forEach(l => { l.d.hidden = !on; }); }
+  function setHidden(on){ showHidden = on; lines.forEach(l => { if (l.userData.hid) l.visible = on; }); frame(); }
+  function stopAnim(){ if (anim) cancelAnimationFrame(anim); anim = null; }
+  function goTo(name){
+    const v = VIEWS.find(x => x[0] === name), t1 = v[2], p1 = v[3], t0 = theta, p0 = phi, z0 = zoom;
+    const dt = (((t1-t0) % (2*Math.PI)) + 3*Math.PI) % (2*Math.PI) - Math.PI;
+    stopAnim();
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches){ theta = t0+dt; phi = p1; zoom = 1; frame(); return; }
+    const start = performance.now(), D = 450;
+    const step = now => { const k = Math.min(1,(now-start)/D), e = k < .5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+      theta = t0+dt*e; phi = p0+(p1-p0)*e; zoom = z0+(1-z0)*e; frame(); anim = k < 1 ? requestAnimationFrame(step) : null; };
+    anim = requestAnimationFrame(step);
+  }
+  // boutons de points de vue
+  const sv = document.getElementById("segView");
+  VIEWS.forEach(([k,label]) => { const b = document.createElement("button"); b.type = "button"; b.dataset.v = k; b.textContent = label; sv.appendChild(b); });
+  sv.addEventListener("click", ev => { const b = ev.target.closest("button"); if (b) goTo(b.dataset.v); });
+  // souris, doigt, molette
+  const cv = renderer.domElement, ptrs = new Map(), ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  const clampPhi = v => Math.min(Math.PI-1e-4, Math.max(1e-4, v)), clampZ = v => Math.min(8, Math.max(.3, v));
+  let moved = 0, pinch0 = 1, zoom0 = 1;
+  function pick(ev){
+    const r = cv.getBoundingClientRect();
+    ndc.set((ev.clientX-r.left)/r.width*2-1, -((ev.clientY-r.top)/r.height)*2+1);
+    ray.setFromCamera(ndc, cam);
+    const hit = ray.intersectObjects(meshes, false)[0];
+    return hit ? hit.object.userData.el : null;
+  }
+  const spread = () => { const [a,b] = [...ptrs.values()]; return Math.hypot(a[0]-b[0], a[1]-b[1]) || 1; };
+  cv.addEventListener("pointerdown", ev => { cv.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId,[ev.clientX,ev.clientY]); moved = 0; stopAnim();
+    if (ptrs.size === 2){ pinch0 = spread(); zoom0 = zoom; } });
+  cv.addEventListener("pointermove", ev => {
+    if (ptrs.has(ev.pointerId)){
+      const [x0,y0] = ptrs.get(ev.pointerId), dx = ev.clientX-x0, dy = ev.clientY-y0;
+      ptrs.set(ev.pointerId,[ev.clientX,ev.clientY]); moved += Math.abs(dx)+Math.abs(dy);
+      if (ptrs.size === 1){ theta -= dx*0.008; phi = clampPhi(phi - dy*0.008); frame(); }
+      else if (ptrs.size === 2){ zoom = clampZ(zoom0*spread()/pinch0); frame(); }
+    } else if (ev.pointerType === "mouse"){ active = pick(ev); applyActive(); }
+  });
+  cv.addEventListener("pointerup", ev => { if (!ptrs.has(ev.pointerId)) return; ptrs.delete(ev.pointerId);
+    if (!ptrs.size && moved < 6){ const id = pick(ev); if (id) togglePin(id); else { pinned = null; applyActive(); } } });
+  cv.addEventListener("pointercancel", ev => ptrs.delete(ev.pointerId));
+  cv.addEventListener("pointerleave", ev => { if (ev.pointerType === "mouse" && !ptrs.size){ active = null; applyActive(); } });
+  cv.addEventListener("wheel", ev => { ev.preventDefault(); stopAnim(); zoom = clampZ(zoom*Math.exp(-ev.deltaY*0.0015)); frame(); }, {passive:false});
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(box); else window.addEventListener("resize", resize);
+  if (PIECE.coupe3d) document.getElementById("cutLab").hidden = false;
+  if (PIECE.scie) document.getElementById("sawLab").hidden = false;
+  return {rebuild, setActive, setHidden, setTan, setAxes, setLabs, setCut, setSaw, goTo};
+})();
+document.getElementById("cutChk").addEventListener("change", ev => view3d && view3d.setCut(ev.target.checked));
+document.getElementById("sawChk").addEventListener("change", ev => view3d && view3d.setSaw(ev.target.checked));
+document.getElementById("axChk").addEventListener("change", ev => view3d && view3d.setAxes(ev.target.checked));
+document.getElementById("labChk").addEventListener("change", ev => view3d && view3d.setLabs(ev.target.checked));
+document.getElementById("tanChk").addEventListener("change", ev => view3d && view3d.setTan(ev.target.checked));
+document.getElementById("hidChk").addEventListener("change", ev => view3d && view3d.setHidden(ev.target.checked));
+
+render();
+})();
+</script>
+
+</body>
+</html>

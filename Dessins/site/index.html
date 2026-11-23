@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cahier de dessin technique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>*,*::before,*::after{box-sizing:border-box} body{margin:0}</style>
+<style>
+/* Layout : sommaire en une colonne de fiches numérotées, comme la table d'un cahier d'exercices. */
+:root{--bg:#eef0ee;--surface:#fff;--fg:#1c2421;--muted:#5d6b65;--line:#cdd4d0;--hl:#e07800;--chip:#e3e8e5;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;--f-body:"Barlow","Segoe UI",Arial,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151a18;--surface:#1e2522;--fg:#e7ece9;--muted:#9fada7;--line:#33403b;--hl:#ff9a2e;--chip:#2a3330;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151a18;--surface:#1e2522;--fg:#e7ece9;--muted:#9fada7;--line:#33403b;--hl:#ff9a2e;--chip:#2a3330;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 40px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--f-display);font-weight:700;font-size:2.4rem;text-transform:uppercase;letter-spacing:.02em;margin:0;line-height:1;text-wrap:balance}
+.lead{color:var(--muted);margin:6px 0 0;max-width:65ch}
+ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}
+.num{font-family:var(--f-display);font-weight:700;font-size:2.2rem;line-height:1;color:var(--hl);font-variant-numeric:tabular-nums}
+.card h2{font-family:var(--f-display);font-weight:600;font-size:1.35rem;text-transform:uppercase;letter-spacing:.03em;margin:0}
+.card p{margin:2px 0 10px;color:var(--muted)}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a{font-weight:600;text-decoration:none;border-radius:6px;padding:6px 12px;color:var(--fg);background:var(--chip)}
+.links a.go{background:var(--hl);color:#fff}
+.links a:focus-visible{outline:2px solid var(--hl);outline-offset:2px}
+footer{color:var(--muted);font-size:.86rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Cahier de dessin technique</h1>
+  <p class="lead">Fiches en projection européenne. Chaque figure interactive montre les traits de construction au survol, le corrigé et la pièce en 3D ; la fiche PDF reprend l’énoncé et le corrigé à l’échelle indiquée sur la fiche.</p></header>
+  <ul class="list">
+    <li class="card"><span class="num">1</span><div class="body"><h2>Entailles et rainure</h2><p>Prisme entaillé : reconnaître les quatre vues et les compléter.</p>
+      <div class="links"><a class="go" href="fiche01.html">Figure interactive</a><a class="pdf" href="pdf/fiche01.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">2</span><div class="body"><h2>Équerre à chapeau</h2><p>Équerre en L posée sur une semelle plus large.</p>
+      <div class="links"><a class="go" href="fiche02.html">Figure interactive</a><a class="pdf" href="pdf/fiche02.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">3</span><div class="body"><h2>Bride ouverte à nez « Norelem »</h2><p>Nez chanfreiné, pans à 45° et fente oblongue ouverte.</p>
+      <div class="links"><a class="go" href="fiche03.html">Figure interactive</a><a class="pdf" href="pdf/fiche03.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">4</span><div class="body"><h2>Butée réglable</h2><p>Montant percé avec tenon, semelle à bout pointu.</p>
+      <div class="links"><a class="go" href="fiche04.html">Figure interactive</a><a class="pdf" href="pdf/fiche04.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">5</span><div class="body"><h2>Porte-outil</h2><p>Plaque à dessus arrondi, bloc rainuré et trou débouchant.</p>
+      <div class="links"><a class="go" href="fiche05.html">Figure interactive</a><a class="pdf" href="pdf/fiche05.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">6</span><div class="body"><h2>Bride de serrage</h2><p>Talon avec congé et chanfrein, biseaux et lumière oblongue.</p>
+      <div class="links"><a class="go" href="fiche06.html">Figure interactive</a><a class="pdf" href="pdf/fiche06.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">7</span><div class="body"><h2>Vé de serrage</h2><p>Vé à 90° avec dégagement, gradin et deux rainures en U.</p>
+      <div class="links"><a class="go" href="fiche07.html">Figure interactive</a><a class="pdf" href="pdf/fiche07.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">8</span><div class="body"><h2>Coulisseau</h2><p>Gradin arrière, tenon en contre-dépouille, fente en U et rainure.</p>
+      <div class="links"><a class="go" href="fiche08.html">Figure interactive</a><a class="pdf" href="pdf/fiche08.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">9</span><div class="body"><h2>Chape</h2><p>Bouts arrondis, fourche fendue, congé et deux trous.</p>
+      <div class="links"><a class="go" href="fiche09.html">Figure interactive</a><a class="pdf" href="pdf/fiche09.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+    <li class="card"><span class="num">10</span><div class="body"><h2>Semelle</h2><p>Pans inclinés, portée demi-cylindrique et boutonnière lamée.</p>
+      <div class="links"><a class="go" href="fiche10.html">Figure interactive</a><a class="pdf" href="pdf/fiche10.pdf">Fiche PDF · énoncé + corrigé</a></div></div></li>
+  </ul>
+  <footer>Les pages fonctionnent hors ligne ; seule la vue 3D a besoin d’Internet (bibliothèque three.js).</footer>
+</div>
+
+</body>
+</html>
