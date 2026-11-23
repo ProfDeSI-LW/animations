@@ -84,6 +84,8 @@
     <div id="adminChamps"></div>
     <details id="adminImpose" style="margin:12px 0"><summary><b>Imposer des séries à un élève</b> (facultatif)</summary>
       <p class="meta">Le lien obtenu est <b>personnel</b> : nom et exercice sont figés, l'élève doit réussir le nombre de séries demandé, chacune avec au moins la note minimale (une série en dessous ne compte pas et est à refaire). Chaque série est enregistrée dans la feuille avec la mention « Série imposée ». Laisser le prénom et le nom vides pour un lien ordinaire.</p>
+      <p class="meta">Liste des élèves lue dans la feuille Google : <input type="password" id="impJeton" placeholder="Jeton du script" autocomplete="off" style="width:11em"> <button type="button" id="impCharger">Charger la liste</button> <span id="impListeMsg"></span></p>
+      <p><select id="impListe" class="hidden" aria-label="Élève"><option value="">— choisir un élève —</option></select></p>
       <p><input type="text" id="impPrenom" placeholder="Prénom"> <input type="text" id="impNom" placeholder="NOM">
          <select id="impExo"><option value="vectoriel">Produits vectoriels</option><option value="scalaire">Produits scalaires</option><option value="base">Changements de base</option></select></p>
       <p><label>Nombre de séries : <input type="number" id="impN" min="1" max="30" value="3" style="width:5em"></label>
@@ -93,6 +95,10 @@
     <textarea id="adminLien" readonly rows="4" style="width:100%;font:12px/1.3 monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
     <p><button class="primary" id="adminCopier">Copier le lien</button> <a id="adminOuvrir" target="_blank" rel="noopener">Ouvrir le lien (test)</a> <button id="adminRaz">Valeurs par défaut</button></p>
     <p class="meta" id="adminMsg"></p>
+    <details style="margin:12px 0"><summary><b>Remettre à zéro</b></summary>
+      <p class="meta">L'historique, les notes mises de côté, le nom mémorisé et les séries imposées sont gardés <b>dans le navigateur de chaque élève</b> (et dans le tien pour tes essais). Ce bouton efface ceux de <b>cet appareil</b> seulement. Pour vider la feuille Google, supprimer ses onglets « Notes V3 … », « Journal V3 … » et « … validées » : le script les recrée au prochain envoi.</p>
+      <p><button id="razAppareil">Effacer les données de la V3 sur cet appareil</button> <span id="razMsg" class="meta"></span></p>
+    </details>
     <details style="margin-top:14px"><summary>Changer le mot de passe</summary>
       <p class="meta">Saisis le nouveau mot de passe : la page calcule la ligne à coller dans le code (à la place de la ligne <code>const MDP=…</code>). Le mot de passe lui-même n'est pas stocké.</p>
       <p><input type="text" id="nouveauMdp" placeholder="Nouveau mot de passe" autocomplete="off"> <button type="button" id="nouveauMdpOk">Calculer</button></p>
@@ -150,7 +156,7 @@
 <script>
 /* ======================= Version ======================= */
 // À augmenter à chaque modification demandée (affichée en bas de page pour vérifier que GitHub Pages sert bien la dernière).
-const VERSION='3.3', VERSION_DATE='23/11/2026';
+const VERSION='3.5', VERSION_DATE='23/11/2026';
 
 /* ======================= Paramètres modifiables ======================= */
 // Valeurs par défaut. Un enseignant peut les changer sans toucher au code : ouvrir la page avec « ?admin »
@@ -176,7 +182,7 @@ const DEFAUTS = {
   consigne: '',                    // texte d'accueil ; vide = « Lancer une série de N calculs. Évaluer les produits suivants. »
   feuille: 'Notes V3',             // début du nom des onglets de notes : « Notes V2 vec » et « Notes V2 sca » (à autoriser dans le script)
   // Adresse du script Google Apps Script (laisser vide pour ne rien enregistrer)
-  urlEnvoi: 'https://script.google.com/macros/s/AKfycbyvNyvD_YBvbqseyVYPppzk4-3W3ucGv47NExKGCK3kZRJfKBvl_ZmMp3e4vBn7ZXEP7g/exec',
+  urlEnvoi: '',
   angleDessin: 25                  // angle (°) utilisé sur les figures
 };
 const BORNES={nbQuestions:[1,30],pointsParQuestion:[1,10],tempsPleinePoints:[3,120],tempsPleinePointsScalaire:[2,120],tempsPleinePointsBase:[3,180],facteurDeuxPas:[1,5],nbDeuxPas:[0,10],plancher:[0,10],probaSansScalaire:[0,1],
@@ -549,7 +555,7 @@ function nomValide(){ return propre($('prenom').value).length>=2&&propre($('nom'
 // (note = null tant qu'elle n'est pas terminée) : une série abandonnée est donc comptée et signalée « non terminée ».
 let partieCourante=0, cleCourante='', idCourant='', modeEssai=false, idSerie='', corrigees=new Set(), nbFautesSerie=0;
 const memHist={};
-function cleHist(prenom,nom){ return (BASE?'hist2c:':SCALAIRE?'hist2s:':'hist2:')+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function cleHist(prenom,nom){ return (BASE?'hist3c:':SCALAIRE?'hist3s:':'hist3:')+(nom+' '+prenom).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
 function lireHist(cle){
   let h=memHist[cle];
   try{ const t=localStorage.getItem(cle); if(t) h=JSON.parse(t); }catch(e){}
@@ -576,7 +582,7 @@ function htmlHistorique(cle){
 // Notes mises de côté : l'élève choisit ses deux dernières parties terminées (consécutives) ; elles sont gardées à part
 // et ne changent que s'il en met deux autres de côté. Envoyées à la feuille (onglet « … validées », une ligne par élève, écrasée).
 const memValide={};
-const cleValide=cle=>'valide2:'+cle.slice(4);   // « hist2:nom » -> « valide2:nom » ; « hist2s:nom » -> « valide2:s:nom »
+const cleValide=cle=>'valide3:'+cle.slice(4);   // « hist3:nom » -> « valide3:3:nom » (clés propres à la V3 : l'historique de la V2, même adresse de site, n'apparaît pas)
 function lireValide(cle){
   let v=memValide[cle];
   try{ const t=localStorage.getItem(cleValide(cle)); if(t) v=JSON.parse(t); }catch(e){}
@@ -660,7 +666,7 @@ function majHistoriqueAccueil(){
 function demarrer(essai=false){
   $('blocAdmin').classList.add('hidden');
   if(!eleve.nom||!$('accueil').classList.contains('hidden')) eleve={prenom:propre($('prenom').value),nom:propre($('nom').value).toUpperCase()};
-  try{ localStorage.setItem('eleve',JSON.stringify(eleve)); }catch(e){}
+  try{ localStorage.setItem('eleve3',JSON.stringify(eleve)); }catch(e){}
   saisieNomOuverte=false; afficherNom();
   $('eleve').textContent=`Élève : ${eleve.prenom} ${eleve.nom}`; $('eleve').classList.remove('hidden');
   document.body.classList.remove('revue');
@@ -756,14 +762,14 @@ construireChoix($('choix'),'g',majApercu); dessinerFigures();
 const MOTS={1:'un',2:'deux',3:'trois',4:'quatre',5:'cinq',6:'six',7:'sept',8:'huit',9:'neuf',10:'dix',12:'douze',15:'quinze',20:'vingt'};
 function majExercice(){
   EXO=document.querySelector('input[name="exo"]:checked').value; SCALAIRE=EXO==='scalaire'; BASE=EXO==='base';
-  try{ localStorage.setItem('exo',EXO); }catch(e){}
+  try{ localStorage.setItem('exo3',EXO); }catch(e){}
   const titre=BASE?'Changements de base':SCALAIRE?'Produits scalaires':'Produits vectoriels';
   construireChoix($('choix'),'g',majApercu);
   document.querySelector('h1').textContent=titre; document.title=titre+' · v'+VERSION;
   $('consigne').textContent=CFG.consigne||(BASE?`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} questions. Exprimer chaque vecteur dans la base indiquée.`:`Lancer une série de ${MOTS[NB_QUESTIONS]||NB_QUESTIONS} calculs. Évaluer les produits ${SCALAIRE?'scalaires':'suivants'}${SCALAIRE?' suivants':''}.`.replace(/ +/g,' '));
   majHistoriqueAccueil(); majRangAccueil();
 }
-try{ const e=localStorage.getItem('exo'); if(e==='scalaire'||e==='base') document.querySelector('input[name="exo"][value="'+e+'"]').checked=true; }catch(e){}
+try{ const e=localStorage.getItem('exo3'); if(e==='scalaire'||e==='base') document.querySelector('input[name="exo"][value="'+e+'"]').checked=true; }catch(e){}
 document.querySelectorAll('input[name="exo"]').forEach(e=>e.addEventListener('change',majExercice));
 ['prenom','nom'].forEach(id=>$(id).addEventListener('change',majRangAccueil));
 if(CFG.essaiTest){ $('essai').classList.remove('hidden'); $('essai').onclick=()=>{ if(nomValide()) demarrer(true); }; }
@@ -777,12 +783,12 @@ function afficherNom(){
   if(memo) $('nomMemoriseTexte').textContent=`${propre($('prenom').value)} ${propre($('nom').value).toUpperCase()}`;
 }
 function ouvrirSaisieNom(){ saisieNomOuverte=true; afficherNom(); $('prenom').focus(); }
-try{ const m=JSON.parse(localStorage.getItem('eleve')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} afficherNom(); majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
+try{ const m=JSON.parse(localStorage.getItem('eleve3')||'null'); if(m){ $('prenom').value=m.prenom; $('nom').value=m.nom; $('demarrer').disabled=$('essai').disabled=!nomValide(); } }catch(e){} afficherNom(); majHistoriqueAccueil(); $('rejouer').onclick=()=>demarrer(modeEssai); $('serie').onclick=()=>demarrer(false);      // même élève : on relance directement
 $('changer').onclick=()=>{ if(!IMP) $('blocAdmin').classList.remove('hidden'); document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); ouvrirSaisieNom(); };
 $('autreExo').onclick=()=>{ if(!IMP) $('blocAdmin').classList.remove('hidden'); document.body.classList.remove('revue'); $('fin').classList.add('hidden'); $('eleve').classList.add('hidden'); $('accueil').classList.remove('hidden'); majHistoriqueAccueil(); afficherNom(); };
 majExercice();
 /* ---- Série imposée : lien personnel (nom et exercice figés, N séries à au moins la note minimale) ---- */
-const cleImp=()=>'imp3:'+[IMP.prenom,IMP.nom,IMP.exo,IMP.n,IMP.min].join('|').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const cleImp=()=>'imp4:'+[IMP.prenom,IMP.nom,IMP.exo,IMP.n,IMP.min].join('|').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const lireImp=()=>{ try{ const v=localStorage.getItem(cleImp()); return v===null?memImp:Number(v)||0; }catch(e){ return memImp; } };
 const ecrireImp=k=>{ memImp=k; try{ localStorage.setItem(cleImp(),String(k)); }catch(e){} };
 function majConsigneImp(){
@@ -883,7 +889,29 @@ if(/[?&]admin\b/.test(location.search)){
     $('adminMsg').textContent=u===DEFAUTS.urlEnvoi&&DEFAUTS.urlEnvoi?'Attention : l\'adresse d\'envoi est encore celle par défaut : les notes de tes élèves iraient dans la feuille de l\'auteur de ce fichier. Remplace-la par la tienne (ou vide-la).':'';
   }
   $('adminCopier').onclick=()=>{ $('adminLien').select(); try{ navigator.clipboard.writeText($('adminLien').value); }catch(e){ document.execCommand('copy'); } };
+  $('razAppareil').onclick=()=>{
+    if(!confirm('Effacer sur cet appareil tout l\'historique, les notes mises de côté, le nom mémorisé et les séries imposées de la V3 ?')) return;
+    let n=0; try{ for(const k of Object.keys(localStorage)) if(/^(hist3|valide3|imp4|eleve3|exo3)/.test(k)){ localStorage.removeItem(k); n++; } }catch(e){}
+    $('razMsg').textContent=n?`${n} élément${n>1?'s':''} effacé${n>1?'s':''}.`:'Rien à effacer.';
+  };
   $('adminRaz').onclick=()=>{ location.hash=''; location.reload(); };
+  try{ $('impJeton').value=localStorage.getItem('jeton3')||''; }catch(e){}
+  $('impCharger').onclick=async()=>{
+    const m=$('impListeMsg'), url=(saisies.urlEnvoi[0].value||'').trim(), jeton=$('impJeton').value.trim();
+    if(!url){ m.textContent='Renseigne d\'abord l\'adresse du script Google (champ plus haut).'; return; }
+    if(!jeton){ m.textContent='Saisis le jeton défini dans le script.'; return; }
+    m.textContent='Chargement…';
+    try{
+      const o=await (await fetch(`${url}?action=eleves&jeton=${encodeURIComponent(jeton)}`)).json();
+      if(o.erreur){ m.textContent=o.erreur==='jeton'?'Jeton refusé (ou non défini dans le script).':'Erreur : '+o.erreur; return; }
+      try{ localStorage.setItem('jeton3',jeton); }catch(e){}
+      const liste=Array.isArray(o.eleves)?o.eleves:[], sel=$('impListe');
+      sel.innerHTML='<option value="">— choisir un élève —</option>'+liste.map(e=>`<option value='${JSON.stringify({p:e.prenom,n:e.nom}).replace(/'/g,'&#39;')}'>${String(e.nom).replace(/</g,'&lt;')} ${String(e.prenom).replace(/</g,'&lt;')}</option>`).join('');
+      sel.classList.toggle('hidden',!liste.length);
+      m.textContent=liste.length?`${liste.length} élève${liste.length>1?'s':''}.`:'Aucun élève dans la feuille pour l\'instant.';
+    }catch(e){ m.textContent='Impossible de lire la liste (adresse du script, déploiement ou connexion).'; }
+  };
+  $('impListe').onchange=()=>{ if(!$('impListe').value) return; const o=JSON.parse($('impListe').value); $('impPrenom').value=o.p; $('impNom').value=o.n; majLien(); };
   ['impPrenom','impNom','impExo','impN','impMin'].forEach(id=>{ $(id).addEventListener('input',majLien); $(id).addEventListener('change',majLien); });
   majLien();
   $('nouveauMdpOk').onclick=async()=>{
