@@ -1,0 +1,37 @@
+CAHIER DE DESSIN TECHNIQUE - fiches 1 à 20
+
+site/          À déposer tel quel sur un hébergement web (index.html = sommaire).
+               Chaque figure interactive est un fichier HTML autonome ; pdf/ contient
+               les fiches papier (page 1 énoncé, page 2 corrigé).
+tikz/          Sources LaTeX. Compiler chaque fiche*.tex avec pdflatex ;
+               dessin-tech.sty (règles R1 à R4, styles, en-tête) et le dossier orig/
+               doivent être à côté.
+               Options (dans dessin-tech.sty ou après \usepackage{dessin-tech}) :
+                 \constructionfalse   pas de traits de construction dans le corrigé
+                 \couleursfalse       arêtes repérées en noir
+                 \tangentestrue       raccords tangents tracés en trait fin sur les perspectives
+                 \coupeenoncefalse    coupes (16 à 20) : l'énoncé ne donne que l'amorce de la
+                                      désignation, comme les fiches d'origine (à compléter par l'élève)
+               \Echelle (en tête de chaque fiche) règle la taille du dessin sur la feuille.
+tikz/orig/     Perspectives « comme la fiche d'origine » (parties vues calculées) ;
+tikz/gen/      régénérées par gen/gen_all.sh (Node + paquet three) à partir de sources-web/pXX.js.
+               Le point de vue de chaque fiche est écrit dans gen_all.sh.
+               gen/checkcons.js vérifie les traits de construction d'une pièce (bouts sur les
+               tracés, arêtes sans trait de construction) ; gen/cons2tex.js les écrit en TikZ :
+               compiler une fiche avec \def\DBGCONS{fichier} les superpose (en couleur) à ceux du PDF.
+tikz/extras/   Figures en plus posées dans la place libre des pages (à trier) : la perspective
+tikz/rendu/    « comme la fiche d'origine » et une vue 3D ombrée (image du module 3D des pages
+               web, sans arêtes cachées). Régénérées par :
+                 node gen/rendu3d.js fiche01 ... (captures, Playwright + Chromium)
+                 python3 gen/placer.py 1 2 ... (cherche la place libre, écrit extras/xNN.tex)
+               Supprimer extras/xNN.tex retire ces figures de la fiche.
+               Fiche 13 : \isomaintrue redonne les anciennes perspectives isométriques.
+sources-web/   Moteur commun (engine.html) + une définition par pièce (p01.js ... p20.js).
+               « python3 build.py » régénère le dossier site/.
+               « python3 build.py --eleves 1,2,3,13 » : version élèves, MÉNAGE COMPLET. Dans tout le
+               dossier, il ne reste que ces fiches : les pages et PDF du site, les pXX.js, les ficheXX.tex
+               et .pdf, les extras, orig et rendu des autres fiches sont supprimés. Irréversible : le faire
+               sur une COPIE de l'archive. Ensuite « python3 build.py » ne refait que les fiches restantes.
+               acces.json : verrou des fiches par mot de passe, par groupes (sommaire, flèches,
+               ouverture directe d'une page). Désactivé ("actif": false) ; le mettre à true puis
+               relancer build.py. Verrou léger : le code source d'une page reste lisible.
