@@ -1,9 +1,5 @@
-<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Systèmes de coordonnées</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=STIX+Two+Text:ital@0;1&display=swap">
 <style>
 /* Mise en page : figure 3D à gauche, réglages et formules à droite ; une colonne sur téléphone */
@@ -22,8 +18,6 @@
   --axis:#e8ebf1; --guide:#6f7a8c;
   --cx:#f0716b; --cy:#5fcf80; --cz:#7ea2ff; --crho:#b88cf5; --cr:#f0a04b; --cth:#3fd0c0; --cph:#f27fae; color-scheme:dark}
 *{box-sizing:border-box}
-[hidden]{display:none!important}
-body{margin:0;font-size:14px}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;
   padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
@@ -72,8 +66,6 @@ h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mu
 .vec::before{content:"→";position:absolute;left:0;right:0;top:-.72em;text-align:center;font-size:.7em;font-style:normal;line-height:1}
 .note{font-size:.82rem;color:var(--muted);margin:8px 0 0}
 </style>
-</head>
-<body>
 
 <div class="wrap">
   <header>
@@ -98,6 +90,7 @@ h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mu
         <div class="opts">
           <label><input type="checkbox" id="o-base" checked> Base locale en M</label>
           <label><input type="checkbox" id="o-surf" checked> Surface de repérage</label>
+          <label id="l-cart" title="Disponible en cylindriques et sphériques"><input type="checkbox" id="o-cart"> Coordonnées cartésiennes (<i>x</i>, <i>y</i>, <i>z</i>)</label>
           <label><input type="checkbox" id="o-vol"> Volume élémentaire en M</label>
           <label><input type="checkbox" id="o-fuite"> Point de fuite</label>
         </div>
@@ -130,7 +123,7 @@ h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mu
 (function(){
 "use strict";
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-const S={x:1.0,y:1.7,z:1.2,theta:Math.atan2(1.7,1.0),sys:'cart',yaw:-2.25,pitch:0.5,base:true,surf:true,vol:false,fuite:false,anim:1};
+const S={x:1.0,y:1.7,z:1.2,theta:Math.atan2(1.7,1.0),sys:'cart',yaw:-2.25,pitch:0.5,base:true,surf:true,vol:false,cart:false,fuite:false,anim:1};
 const VIEWS={persp:[-2.25,0.5],top:[0,Math.PI/2],face:[0,0.0],side:[-Math.PI/2,0.0]};
 const D2R=Math.PI/180;
 let W=600,H=460,U=60,CX=300,CY=240,DPR=1;
@@ -234,13 +227,17 @@ function refresh(syncSliders=true){
 }
 function setSystem(k){
   if(k===S.sys)return;
-  S.sys=k;
+  S.sys=k;majOptCart();
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.id==='t-'+k)));
   buildSliders();buildVol();S.anim=0;animate();refresh();
 }
 ['cart','cyl','sph'].forEach(k=>document.getElementById('t-'+k).addEventListener('click',()=>setSystem(k)));
 document.getElementById('o-base').addEventListener('change',e=>{S.base=e.target.checked;draw()});
 document.getElementById('o-fuite').addEventListener('change',e=>{S.fuite=e.target.checked;draw()});
+const oCart=document.getElementById('o-cart'),lCart=document.getElementById('l-cart');
+function majOptCart(){const off=S.sys==='cart';oCart.disabled=off;lCart.style.opacity=off?0.45:1}
+oCart.addEventListener('change',e=>{S.cart=e.target.checked;draw()});
+majOptCart();
 document.getElementById('o-vol').addEventListener('change',e=>{S.vol=e.target.checked;buildVol();draw()});
 document.getElementById('o-surf').addEventListener('change',e=>{S.surf=e.target.checked;draw()});
 
@@ -422,6 +419,15 @@ function draw(){
     segLabel(O,M,'r',null,C['--cr'],16);
     ptLabel(Hh,12,14,'H',null,C['--guide'],{size:17});dot(Hh,C['--guide'],3.5);
   }
+  /* coordonnées cartésiennes superposées (figures cylindrique et sphérique) */
+  if(S.cart&&sys!=='cart'){
+    const A=[S.x,0,0],B=[S.x,S.y,0],Y=[0,S.y,0],Z=[0,0,S.z],XZ=[S.x,0,S.z],YZ=[0,S.y,S.z];
+    if(S.surf)[[O,Y],[Y,B],[O,Z],[A,XZ],[Y,YZ],[Z,XZ],[Z,YZ],[XZ,M],[YZ,M]].forEach(e=>path3(e,G,1,[3,4],0.45));
+    path3([O,A],C['--cx'],2.8);path3([A,B],C['--cy'],2.8);
+    if(sys==='sph')path3([B,M],C['--cz'],2.8);
+    segLabel(O,A,'x',null,C['--cx'],16);segLabel(A,B,'y',null,C['--cy'],16);
+    if(sys==='sph')segLabel(B,M,'z',null,C['--cz'],16);
+  }
   ctx.restore();
 
   /* volume élémentaire en M */
@@ -481,5 +487,3 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>
 new MutationObserver(()=>draw()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 })();
 </script>
-</body>
-</html>
