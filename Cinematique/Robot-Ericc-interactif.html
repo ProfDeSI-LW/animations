@@ -104,6 +104,10 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
   .layout{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
   svg{max-height:calc(100vh - 28px)}
 }
+.layout.stack{grid-template-columns:minmax(0,1fr)!important}
+.layout.stack .ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));align-items:start}
+.layout.stack .ctrl>.sep,.layout.stack .ctrl>.actions{grid-column:1/-1}
+svg.zoomed{cursor:move}
 .figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
 .figtools button{padding:3px 9px;font-size:.85rem}
 #fsplay{display:none}
@@ -120,11 +124,12 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
     <h1>Robot Ericc : paramétrage α, β</h1>
     <p class="sub">Mêmes notations que dans le TD. Réglez les angles et les vitesses de rotation, lancez le mouvement et laissez la trace de B se dessiner.</p>
    </div>
+   <div class="zoom"><button id="lay" type="button" aria-pressed="false" title="Placer les réglages à droite ou sous la figure">Réglages : à droite</button></div>
    <div class="zoom" role="group" aria-label="Taille de l'affichage">Taille <button id="zm" aria-label="Réduire l'affichage">A−</button><button id="zp" aria-label="Agrandir l'affichage">A+</button><button id="za" aria-label="Taille automatique" title="Taille automatique">auto</button></div>
   </div>
   <div class="layout">
     <div class="fig">
-      <div class="figtools"><button id="fsplay" type="button">Lancer</button><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
+      <div class="figtools"><button id="zin" type="button" aria-label="Zoom avant" title="Zoom avant">+</button><button id="zout" type="button" aria-label="Zoom arrière" title="Zoom arrière">−</button><button id="zrs" type="button" title="Cadrage initial">1:1</button><button id="fsplay" type="button">Lancer</button><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
       <div class="tcount" id="tcount" aria-live="off"></div>
             <svg id="fig" viewBox="0 0 640 560" role="img" aria-label="Schéma de deux axes du robot Ericc 3 : bâti 0, bras 1 et bras 2 dans le plan"></svg>
     </div>
@@ -406,6 +411,27 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
     new MutationObserver(syncPlay).observe(pl,{childList:true,characterData:true,subtree:true});
     var tc=document.getElementById("tcount"),ot=document.getElementById("oTr"),dr=draw;
     draw=function(){dr();tc.textContent=(ot&&ot.checked)?"Trace : "+trace.length+" / "+TRMAX+" points":"";};
+  })();
+  (function(){var svgE=document.getElementById("fig"),V0={x:0,y:0,w:640,h:560},V={x:0,y:0,w:640,h:560},lay=document.querySelector(".layout"),lb=document.getElementById("lay");
+    function setL(st){lay.classList.toggle("stack",st);lb.setAttribute("aria-pressed",st?"true":"false");lb.textContent=st?"Réglages : dessous":"Réglages : à droite";try{localStorage.setItem("anim-layout",st?"1":"0");}catch(e){}}
+    lb.addEventListener("click",function(){setL(!lay.classList.contains("stack"));});
+    try{if(localStorage.getItem("anim-layout")==="1")setL(true);}catch(e){}
+    function apply(){svgE.setAttribute("viewBox",V.x+" "+V.y+" "+V.w+" "+V.h);svgE.classList.toggle("zoomed",V.w<V0.w-0.5);}
+    function clamp(){V.w=Math.min(V0.w,Math.max(V0.w/12,V.w));V.h=V.w*V0.h/V0.w;V.x=Math.min(V0.x+V0.w-V.w,Math.max(V0.x,V.x));V.y=Math.min(V0.y+V0.h-V.h,Math.max(V0.y,V.y));}
+    function zoomAt(f,cx,cy){var nx=V.x+(V.w)*cx,ny=V.y+(V.h)*cy;V.w/=f;V.h/=f;V.x=nx-V.w*cx;V.y=ny-V.h*cy;clamp();apply();}
+    function rel(e){var r=svgE.getBoundingClientRect();return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];}
+    document.getElementById("zin").onclick=function(){zoomAt(1.4,.5,.5);};
+    document.getElementById("zout").onclick=function(){zoomAt(1/1.4,.5,.5);};
+    document.getElementById("zrs").onclick=function(){V={x:V0.x,y:V0.y,w:V0.w,h:V0.h};apply();};
+    svgE.addEventListener("wheel",function(e){e.preventDefault();var c=rel(e);zoomAt(e.deltaY<0?1.15:1/1.15,c[0],c[1]);},{passive:false});
+    var P={};
+    svgE.addEventListener("pointerdown",function(e){P[e.pointerId]={x:e.clientX,y:e.clientY};try{svgE.setPointerCapture(e.pointerId);}catch(x){}});
+    function end(e){delete P[e.pointerId];}
+    svgE.addEventListener("pointerup",end);svgE.addEventListener("pointercancel",end);
+    svgE.addEventListener("pointermove",function(e){var o=P[e.pointerId];if(!o)return;var ids=Object.keys(P),r=svgE.getBoundingClientRect();
+      if(ids.length===2){var q=P[ids[0]==e.pointerId?ids[1]:ids[0]],d0=Math.hypot(o.x-q.x,o.y-q.y),d1=Math.hypot(e.clientX-q.x,e.clientY-q.y);P[e.pointerId]={x:e.clientX,y:e.clientY};if(d0>5&&d1>5){var c=rel({clientX:(e.clientX+q.x)/2,clientY:(e.clientY+q.y)/2});zoomAt(d1/d0,c[0],c[1]);}return;}
+      if(V.w<V0.w-0.5){V.x-=(e.clientX-o.x)*V.w/r.width;V.y-=(e.clientY-o.y)*V.h/r.height;clamp();apply();}
+      P[e.pointerId]={x:e.clientX,y:e.clientY};});
   })();
   pushTrace();applyZoom();applyLock();
 })();
