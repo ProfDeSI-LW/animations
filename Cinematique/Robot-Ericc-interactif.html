@@ -336,7 +336,7 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
 
   // ---- options réservées à l'enseignant : le code est comparé par empreinte (il n'apparaît pas en clair dans la page) ----
   // Pour changer le code : ouvrir la console du navigateur, taper codeHash("nouveau code") et remplacer la valeur de CODE_H.
-  var CODE_H=433024637;
+  var CODE_H=2424985354;
   function codeHash(s){var h=5381,i;for(i=0;i<s.length;i++)h=(((h*33)^s.charCodeAt(i))>>>0);return h;}
   window.codeHash=codeHash;
   var unlocked=false;try{unlocked=localStorage.getItem("anim-code")===String(CODE_H);}catch(e){}
