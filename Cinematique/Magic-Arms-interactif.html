@@ -104,6 +104,25 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
   .layout{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
   svg{max-height:calc(100vh - 28px)}
 }
+.layout.stack{grid-template-columns:minmax(0,1fr)!important}
+.layout.stack .ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));align-items:start}
+.layout.stack .ctrl>.sep,.layout.stack .ctrl>.actions{grid-column:1/-1}
+svg.zoomed{cursor:move}
+@media (min-width:781px) and (hover:hover){
+  main.wide{max-width:none}
+  .layout.wset{grid-template-columns:var(--fw) minmax(16rem,1fr)}
+  .layout.wset.stack{grid-template-columns:minmax(0,min(var(--fw),100%))!important}
+}
+.rszw{position:absolute;top:0;bottom:0;right:-3px;width:12px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center}
+.rszw::before{content:"";height:56px;width:4px;border-radius:2px;background:var(--muted);opacity:.55}
+.rszw:hover::before{opacity:1}
+@media (max-width:780px),(hover:none){.rszw{display:none}}
+.fig.fs .rszw{display:none}
+svg.hset{max-height:none!important}
+.rsz{height:14px;margin-top:2px;cursor:ns-resize;touch-action:none;display:flex;align-items:center;justify-content:center}
+.rsz::before{content:"";width:56px;height:4px;border-radius:2px;background:var(--muted);opacity:.55}
+.rsz:hover::before{opacity:1}
+.fig.fs .rsz{display:none}
 .figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
 .figtools button{padding:3px 9px;font-size:.85rem}
 #fsplay{display:none}
@@ -120,13 +139,16 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
     <h1>Magic Arms : paramétrage α, β, φ</h1>
     <p class="sub">Modèle du TD (l₁ = 3,9 m, l₂ = 2,9 m, R = 2,6 m). Réglez les angles et les vitesses de rotation, lancez le mouvement et laissez la trace du passager P se dessiner. Faites glisser la figure pour changer de point de vue.</p>
    </div>
+   <div class="zoom"><button id="lay" type="button" aria-pressed="false" title="Placer les réglages à droite ou sous la figure">Réglages : à droite</button></div>
    <div class="zoom" role="group" aria-label="Taille de l'affichage">Taille <button id="zm" aria-label="Réduire l'affichage">A−</button><button id="zp" aria-label="Agrandir l'affichage">A+</button><button id="za" aria-label="Taille automatique" title="Taille automatique">auto</button></div>
   </div>
   <div class="layout">
     <div class="fig">
-      <div class="figtools"><button id="fsplay" type="button">Lancer</button><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
+      <div class="figtools"><button id="zin" type="button" aria-label="Zoom avant" title="Zoom avant">+</button><button id="zout" type="button" aria-label="Zoom arrière" title="Zoom arrière">−</button><button id="zrs" type="button" title="Cadrage initial">1:1</button><button id="fsplay" type="button">Lancer</button><button id="fsb" type="button" aria-label="Plein écran" title="Plein écran">Plein écran</button></div>
       <div class="tcount" id="tcount" aria-live="off"></div>
             <svg id="fig" viewBox="0 0 640 560" role="img" aria-label="Schéma du manège Magic Arms : bâti 0, bras principal 1, bras secondaire 2 et nacelle 3, avec les repères associés"></svg>
+      <div class="rszw" id="rszw" role="separator" aria-orientation="vertical" title="Glisser pour régler la largeur (double-clic : automatique)"></div>
+      <div class="rsz" id="rsz" role="separator" aria-orientation="horizontal" title="Glisser pour régler la hauteur (double-clic : automatique)"></div>
       <div class="hint">Glisser pour tourner la vue</div>
     </div>
     <div class="ctrl">
@@ -459,7 +481,7 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
 
   // ---- options réservées à l'enseignant : le code est comparé par empreinte (il n'apparaît pas en clair dans la page) ----
   // Pour changer le code : ouvrir la console du navigateur, taper codeHash("nouveau code") et remplacer la valeur de CODE_H.
-  var CODE_H=433024637;
+  var CODE_H=2424985354;
   function codeHash(s){var h=5381,i;for(i=0;i<s.length;i++)h=(((h*33)^s.charCodeAt(i))>>>0);return h;}
   window.codeHash=codeHash;
   var unlocked=false;try{unlocked=localStorage.getItem("anim-code")===String(CODE_H);}catch(e){}
@@ -532,6 +554,45 @@ svg text{font-family:var(--font-math);fill:var(--ink)}
     new MutationObserver(syncPlay).observe(pl,{childList:true,characterData:true,subtree:true});
     var tc=document.getElementById("tcount"),ot=document.getElementById("oTr"),dr=draw;
     draw=function(){dr();tc.textContent=(ot&&ot.checked)?"Trace : "+trace.length+" / "+TRMAX+" points":"";};
+  })();
+  (function(){var svgE=document.getElementById("fig"),V0={x:0,y:0,w:640,h:560},V={x:0,y:0,w:640,h:560},lay=document.querySelector(".layout"),lb=document.getElementById("lay");
+    function setL(st){lay.classList.toggle("stack",st);lb.setAttribute("aria-pressed",st?"true":"false");lb.textContent=st?"Réglages : dessous":"Réglages : à droite";try{localStorage.setItem("anim-layout",st?"1":"0");}catch(e){}}
+    lb.addEventListener("click",function(){setL(!lay.classList.contains("stack"));});
+    try{if(localStorage.getItem("anim-layout")==="1")setL(true);}catch(e){}
+    function apply(){svgE.setAttribute("viewBox",V.x+" "+V.y+" "+V.w+" "+V.h);svgE.classList.toggle("zoomed",V.w<V0.w-0.5);}
+    function clamp(){V.w=Math.min(V0.w,Math.max(V0.w/12,V.w));V.h=V.w*V0.h/V0.w;V.x=Math.min(V0.x+V0.w-V.w,Math.max(V0.x,V.x));V.y=Math.min(V0.y+V0.h-V.h,Math.max(V0.y,V.y));}
+    function zoomAt(f,cx,cy){var nx=V.x+(V.w)*cx,ny=V.y+(V.h)*cy;V.w/=f;V.h/=f;V.x=nx-V.w*cx;V.y=ny-V.h*cy;clamp();apply();}
+    function rel(e){var r=svgE.getBoundingClientRect();return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];}
+    document.getElementById("zin").onclick=function(){zoomAt(1.4,.5,.5);};
+    document.getElementById("zout").onclick=function(){zoomAt(1/1.4,.5,.5);};
+    document.getElementById("zrs").onclick=function(){V={x:V0.x,y:V0.y,w:V0.w,h:V0.h};apply();};
+    svgE.addEventListener("wheel",function(e){e.preventDefault();var c=rel(e);zoomAt(e.deltaY<0?1.15:1/1.15,c[0],c[1]);},{passive:false});
+    var P={};
+    svgE.addEventListener("pointerdown",function(e){P[e.pointerId]={x:e.clientX,y:e.clientY};try{svgE.setPointerCapture(e.pointerId);}catch(x){}});
+    function end(e){delete P[e.pointerId];}
+    svgE.addEventListener("pointerup",end);svgE.addEventListener("pointercancel",end);
+    svgE.addEventListener("pointermove",function(e){var o=P[e.pointerId];if(!o)return;var ids=Object.keys(P),r=svgE.getBoundingClientRect();
+      if(ids.length===2){var q=P[ids[0]==e.pointerId?ids[1]:ids[0]],d0=Math.hypot(o.x-q.x,o.y-q.y),d1=Math.hypot(e.clientX-q.x,e.clientY-q.y);P[e.pointerId]={x:e.clientX,y:e.clientY};if(d0>5&&d1>5){var c=rel({clientX:(e.clientX+q.x)/2,clientY:(e.clientY+q.y)/2});zoomAt(d1/d0,c[0],c[1]);}return;}
+      if(V.w<V0.w-0.5){V.x-=(e.clientX-o.x)*V.w/r.width;V.y-=(e.clientY-o.y)*V.h/r.height;clamp();apply();}
+      P[e.pointerId]={x:e.clientX,y:e.clientY};});
+  })();
+  (function(){var sv=document.getElementById("fig"),h=document.getElementById("rsz"),fg=document.querySelector(".fig"),y0=0,h0=0,on=false;
+    function setH(v){if(v==null){sv.style.height="";sv.classList.remove("hset");try{localStorage.removeItem("anim-h");}catch(e){}return;}
+      v=Math.max(160,Math.min(v,window.innerHeight*3));sv.style.height=v+"px";sv.classList.add("hset");try{localStorage.setItem("anim-h",String(Math.round(v)));}catch(e){}}
+    try{var q=parseInt(localStorage.getItem("anim-h"),10);if(q>=160)setH(q);}catch(e){}
+    h.addEventListener("pointerdown",function(e){on=true;y0=e.clientY;h0=sv.getBoundingClientRect().height;try{h.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
+    h.addEventListener("pointermove",function(e){if(on)setH(h0+e.clientY-y0);});
+    function end(){on=false;}h.addEventListener("pointerup",end);h.addEventListener("pointercancel",end);
+    h.addEventListener("dblclick",function(){setH(null);});
+  })();
+  (function(){var w=document.getElementById("rszw"),fg=document.querySelector(".fig"),lay=document.querySelector(".layout"),mn=document.querySelector("main"),x0=0,w0=0,on=false;
+    function setW(v){if(v==null){lay.classList.remove("wset");mn.classList.remove("wide");lay.style.removeProperty("--fw");try{localStorage.removeItem("anim-w");}catch(e){}return;}
+      v=Math.max(320,Math.min(v,window.innerWidth-40));lay.style.setProperty("--fw",v+"px");lay.classList.add("wset");mn.classList.add("wide");try{localStorage.setItem("anim-w",String(Math.round(v)));}catch(e){}}
+    try{var q=parseInt(localStorage.getItem("anim-w"),10);if(q>=320)setW(q);}catch(e){}
+    w.addEventListener("pointerdown",function(e){on=true;x0=e.clientX;w0=fg.getBoundingClientRect().width;try{w.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
+    w.addEventListener("pointermove",function(e){if(on)setW(w0+e.clientX-x0);});
+    function end(){on=false;}w.addEventListener("pointerup",end);w.addEventListener("pointercancel",end);
+    w.addEventListener("dblclick",function(){setW(null);});
   })();
   pushTrace();applyZoom();applyLock();
 })();
